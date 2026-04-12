@@ -367,7 +367,7 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
   const [saving, setSaving] = useState(false)
   const [extracted, setExtracted] = useState(null)
   const [needsTitle, setNeedsTitle] = useState(false)
-  const [showPreview, setShowPreview] = useState(false)
+  const [activeSection, setActiveSection] = useState(null) // 'ingredients' | 'steps' | 'nutrition'
   const [newCatInput, setNewCatInput] = useState('')
   const [addingCat, setAddingCat] = useState(false)
   const [localCategories, setLocalCategories] = useState(categories || [])
@@ -406,7 +406,7 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
       }
       if (data.suggested_category_id) setCategoryId(String(data.suggested_category_id))
       setExtracted(data)
-      setShowPreview(false)
+      setActiveSection(null)
       toast('Extracted successfully!', 'success')
     } catch {
       toast('Could not extract details', 'error')
@@ -506,59 +506,68 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
           )}
 
 
-          {/* Extracted preview — clickable badges + expandable detail */}
+          {/* Extracted preview — each badge independently toggles its section */}
           {!!(extracted && (ingCount > 0 || stepCount > 0)) && (
             <div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', cursor: 'pointer' }} onClick={() => setShowPreview(p => !p)}>
-                {ingCount > 0 && <span className="badge badge-green" style={{ cursor: 'pointer' }}>🥄 {ingCount} ingredients</span>}
-                {stepCount > 0 && <span className="badge badge-gold" style={{ cursor: 'pointer' }}>📋 {stepCount} steps</span>}
-                {extracted.nutrition?.calories
-                  ? <span className="badge badge-red">🔥 {extracted.nutrition.calories} kcal</span>
-                  : <span className="badge" style={{ background: 'var(--cream-2)', color: 'var(--ink-3)', cursor: 'default' }}>nutrition preview</span>
-                }
-                <span style={{ fontSize: 11, color: 'var(--ink-3)', alignSelf: 'center' }}>{showPreview ? '▲ hide' : '▼ preview'}</span>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {ingCount > 0 && (
+                  <span className="badge badge-green" style={{ cursor: 'pointer', opacity: activeSection && activeSection !== 'ingredients' ? 0.5 : 1 }}
+                    onClick={() => setActiveSection(s => s === 'ingredients' ? null : 'ingredients')}>
+                    🥄 {ingCount} ingredients {activeSection === 'ingredients' ? '▲' : '▼'}
+                  </span>
+                )}
+                {stepCount > 0 && (
+                  <span className="badge badge-gold" style={{ cursor: 'pointer', opacity: activeSection && activeSection !== 'steps' ? 0.5 : 1 }}
+                    onClick={() => setActiveSection(s => s === 'steps' ? null : 'steps')}>
+                    📋 {stepCount} steps {activeSection === 'steps' ? '▲' : '▼'}
+                  </span>
+                )}
+                {extracted.nutrition?.calories > 0 ? (
+                  <span className="badge badge-red" style={{ cursor: 'pointer', opacity: activeSection && activeSection !== 'nutrition' ? 0.5 : 1 }}
+                    onClick={() => setActiveSection(s => s === 'nutrition' ? null : 'nutrition')}>
+                    🔥 {extracted.nutrition.calories} kcal {activeSection === 'nutrition' ? '▲' : '▼'}
+                  </span>
+                ) : (
+                  <span className="badge" style={{ background: 'var(--cream-2)', color: 'var(--ink-3)' }}>nutrition estimated</span>
+                )}
               </div>
-              {showPreview && (
-                <div style={{ marginTop: 10, background: 'var(--cream)', borderRadius: 12, padding: '12px 14px', border: '1px solid var(--border)', maxHeight: 260, overflowY: 'auto' }}>
-                  {ingCount > 0 && (
-                    <div style={{ marginBottom: 12 }}>
-                      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Ingredients</p>
-                      {Object.entries(extracted.ingredients).map(([group, items]) => (
-                        <div key={group} style={{ marginBottom: 6 }}>
-                          {Object.keys(extracted.ingredients).length > 1 && <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', marginBottom: 3 }}>{group}</p>}
-                          {(Array.isArray(items) ? items : []).map((ing, i) => (
-                            <p key={i} style={{ fontSize: 12.5, color: 'var(--ink)', lineHeight: 1.6 }}>• {ing}</p>
-                          ))}
-                        </div>
+
+              {activeSection === 'ingredients' && ingCount > 0 && (
+                <div style={{ marginTop: 8, background: 'var(--cream)', borderRadius: 12, padding: '12px 14px', border: '1px solid var(--border)', maxHeight: 220, overflowY: 'auto' }}>
+                  {Object.entries(extracted.ingredients).map(([group, items]) => (
+                    <div key={group} style={{ marginBottom: 6 }}>
+                      {Object.keys(extracted.ingredients).length > 1 && <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', marginBottom: 3 }}>{group}</p>}
+                      {(Array.isArray(items) ? items : []).map((ing, i) => (
+                        <p key={i} style={{ fontSize: 12.5, color: 'var(--ink)', lineHeight: 1.6 }}>• {ing}</p>
                       ))}
                     </div>
-                  )}
-                  {stepCount > 0 && (
-                    <div style={{ marginBottom: extracted.nutrition?.calories ? 12 : 0 }}>
-                      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Steps</p>
-                      {extracted.instructions.map((step, i) => (
-                        <p key={i} style={{ fontSize: 12.5, color: 'var(--ink)', lineHeight: 1.6, marginBottom: 4 }}><strong>{i + 1}.</strong> {step}</p>
-                      ))}
-                    </div>
-                  )}
-                  {extracted.nutrition?.calories > 0 && (
-                    <div>
-                      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Nutrition (per serving)</p>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                        {[
-                          { label: 'Calories', value: extracted.nutrition.calories, unit: 'kcal', color: 'var(--primary)' },
-                          { label: 'Protein',  value: extracted.nutrition.protein,  unit: 'g', color: '#E84C8B' },
-                          { label: 'Carbs',    value: extracted.nutrition.carbs,    unit: 'g', color: '#F4B942' },
-                          { label: 'Fat',      value: extracted.nutrition.fat,      unit: 'g', color: '#5C7A5A' },
-                        ].map(n => (
-                          <div key={n.label} style={{ background: '#fff', borderRadius: 8, padding: '6px 10px', border: '1px solid var(--border)' }}>
-                            <p style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 1 }}>{n.label}</p>
-                            <p style={{ fontSize: 13, fontWeight: 700, color: n.color }}>{n.value}{n.unit}</p>
-                          </div>
-                        ))}
+                  ))}
+                </div>
+              )}
+
+              {activeSection === 'steps' && stepCount > 0 && (
+                <div style={{ marginTop: 8, background: 'var(--cream)', borderRadius: 12, padding: '12px 14px', border: '1px solid var(--border)', maxHeight: 220, overflowY: 'auto' }}>
+                  {extracted.instructions.map((step, i) => (
+                    <p key={i} style={{ fontSize: 12.5, color: 'var(--ink)', lineHeight: 1.6, marginBottom: 6 }}><strong>{i + 1}.</strong> {step}</p>
+                  ))}
+                </div>
+              )}
+
+              {activeSection === 'nutrition' && extracted.nutrition?.calories > 0 && (
+                <div style={{ marginTop: 8, background: 'var(--cream)', borderRadius: 12, padding: '12px 14px', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                    {[
+                      { label: 'Calories', value: extracted.nutrition.calories, unit: 'kcal', color: 'var(--primary)' },
+                      { label: 'Protein',  value: extracted.nutrition.protein,  unit: 'g',    color: '#E84C8B' },
+                      { label: 'Carbs',    value: extracted.nutrition.carbs,    unit: 'g',    color: '#F4B942' },
+                      { label: 'Fat',      value: extracted.nutrition.fat,      unit: 'g',    color: '#5C7A5A' },
+                    ].map(n => (
+                      <div key={n.label} style={{ background: '#fff', borderRadius: 8, padding: '6px 10px', border: '1px solid var(--border)' }}>
+                        <p style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 1 }}>{n.label}</p>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: n.color }}>{n.value}{n.unit}</p>
                       </div>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
