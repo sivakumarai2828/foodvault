@@ -365,6 +365,11 @@ async def extract_recipe(url: str, caption: Optional[str] = None):
         caption = (caption or social["caption"] or "").strip()
         details = await ai_extract_recipe_details(url, "", caption, categories)
         title = details.get("title") or ""
+        # Fallback: use first short line of caption as title if AI returned empty
+        if not title and caption:
+            first_line = caption.split('\n')[0].strip()
+            if first_line and len(first_line) < 80 and not any(c in first_line for c in ['http', '#', '@']):
+                title = first_line
         cat_id = suggest_category_id(details.get("category", ""), categories)
         return {
             "title": title,
