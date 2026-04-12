@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from typing import Optional
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -218,6 +218,16 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="FoodVault API", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
+async def get_user_id(authorization: Optional[str] = Header(None)) -> str:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    token = authorization.split(" ", 1)[1]
+    try:
+        user_resp = supabase.auth.get_user(token)
+        return user_resp.user.id
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
 # ─── Schemas ──────────────────────────────────────────────────────────────────
 
 class RecipeCreate(BaseModel):
@@ -366,23 +376,17 @@ async def extract_recipe(url: str):
         # yt-dlp gives the actual reel food image; microlink often returns the app logo
         thumbnail = social["thumbnail"] or preview["thumbnail"]
         caption = social["caption"]
-        if caption:
-            details = await ai_extract_recipe_details(url, "", caption)
-            title = details.get("title") or ""
-            cat_id = suggest_category_id(title, categories)
-            return {
-                "title": title,
-                "thumbnail": thumbnail,
-                "description": caption[:300],
-                "ingredients": details.get("ingredients", {}),
-                "instructions": details.get("instructions", []),
-                "nutrition": details.get("nutrition", {}),
-                "suggested_category_id": cat_id,
-            }
+        details = await ai_extract_recipe_details(url, "", caption)
+        title = details.get("title") or ""
+        cat_id = suggest_category_id(title, categories)
         return {
-            "title": "", "thumbnail": thumbnail, "description": "",
-            "ingredients": {}, "instructions": [], "nutrition": {},
-            "suggested_category_id": None,
+            "title": title,
+            "thumbnail": thumbnail,
+            "description": caption[:300] if caption else "",
+            "ingredients": details.get("ingredients", {}),
+            "instructions": details.get("instructions", []),
+            "nutrition": details.get("nutrition", {}),
+            "suggested_category_id": cat_id,
         }
 
     details = await ai_extract_recipe_details(url, preview["title"], preview["description"])
@@ -395,9 +399,9 @@ async def extract_recipe(url: str):
 # ─── Recipes ──────────────────────────────────────────────────────────────────
 
 @app.get("/api/recipes")
-def list_recipes(category_id: Optional[int] = None, q: Optional[str] = None):
+def list_recipes(category_id: Optional[int] = None, q: Optional[str] = None, user_id: str = Depends(get_user_id)):
     try:
-        query = supabase.table("recipes").select("*, categories(name)").order("created_at", desc=True)
+        query = supabase.table("recipes").select("*, categories(name)").eq("user_id", user_id).order("created_at", desc=True)
         if category_id:
             query = query.eq("category_id", category_id)
         if q:
@@ -407,7 +411,7 @@ def list_recipes(category_id: Optional[int] = None, q: Optional[str] = None):
         raise HTTPException(status_code=503, detail=f"Database unavailable: {e}")
 
 @app.post("/api/recipes", status_code=201)
-async def create_recipe(data: RecipeCreate):
+async def create_recipe(data: RecipeCreate, user_id: str = Depends(get_user_id)):
     preview = await fetch_link_preview(data.url)
     description = data.description or preview["description"]
 
@@ -445,6 +449,7 @@ async def create_recipe(data: RecipeCreate):
             title = data.title or details.get("title") or preview["title"]
 
     row = {
+        "user_id":      user_id,
         "title":        title,
         "url":          data.url,
         "thumbnail":    data.thumbnail or yt_thumbnail or preview["thumbnail"],
@@ -460,26 +465,26 @@ async def create_recipe(data: RecipeCreate):
     return enrich_recipe(res.data[0])
 
 @app.get("/api/recipes/{recipe_id}")
-def get_recipe(recipe_id: int):
-    res = sb_one(supabase.table("recipes").select("*, categories(name)").eq("id", recipe_id))
+def get_recipe(recipe_id: int, user_id: str = Depends(get_user_id)):
+    res = sb_one(supabase.table("recipes").select("*, categories(name)").eq("id", recipe_id).eq("user_id", user_id))
     if not res:
         raise HTTPException(status_code=404, detail="Not found")
     return enrich_recipe(res)
 
 @app.patch("/api/recipes/{recipe_id}")
-def update_recipe(recipe_id: int, data: RecipeUpdate):
+def update_recipe(recipe_id: int, data: RecipeUpdate, user_id: str = Depends(get_user_id)):
     updates = {k: v for k, v in data.model_dump().items() if v is not None or k in ('ingredients', 'instructions', 'nutrition')}
     updates = {k: v for k, v in updates.items() if k in data.model_fields_set}
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
-    res = supabase.table("recipes").update(updates).eq("id", recipe_id).execute()
+    res = supabase.table("recipes").update(updates).eq("id", recipe_id).eq("user_id", user_id).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Not found")
     return enrich_recipe(res.data[0])
 
 @app.delete("/api/recipes/{recipe_id}", status_code=204)
-def delete_recipe(recipe_id: int):
-    supabase.table("recipes").delete().eq("id", recipe_id).execute()
+def delete_recipe(recipe_id: int, user_id: str = Depends(get_user_id)):
+    supabase.table("recipes").delete().eq("id", recipe_id).eq("user_id", user_id).execute()
 
 # ─── AI ───────────────────────────────────────────────────────────────────────
 
@@ -529,8 +534,8 @@ def ai_extract_ingredients(recipe_id: int):
         return {"ingredients": [result]}
 
 @app.post("/api/ai/suggest-plan")
-def ai_suggest_plan():
-    recipes = supabase.table("recipes").select("*, categories(name)").execute().data
+def ai_suggest_plan(user_id: str = Depends(get_user_id)):
+    recipes = supabase.table("recipes").select("*, categories(name)").eq("user_id", user_id).execute().data
     if not recipes:
         raise HTTPException(status_code=400, detail="No recipes in library")
     recipe_list = "\n".join([
@@ -550,7 +555,7 @@ def ai_suggest_plan():
     except Exception:
         raise HTTPException(status_code=500, detail=f"AI returned invalid JSON: {result}")
     ws = current_week_start()
-    supabase.table("meal_plans").delete().eq("week_start", ws).execute()
+    supabase.table("meal_plans").delete().eq("week_start", ws).eq("user_id", user_id).execute()
     recipe_ids = {r["id"] for r in recipes}
     created = []
     for day, slots in plan_data.items():
@@ -562,13 +567,13 @@ def ai_suggest_plan():
             except (TypeError, ValueError):
                 continue
             if rid_int in recipe_ids:
-                supabase.table("meal_plans").insert({"week_start": ws, "day_of_week": day, "meal_slot": slot, "recipe_id": rid_int}).execute()
+                supabase.table("meal_plans").insert({"week_start": ws, "day_of_week": day, "meal_slot": slot, "recipe_id": rid_int, "user_id": user_id}).execute()
                 created.append({"day": day, "slot": slot, "recipe_id": rid_int})
     return {"created": len(created), "plan": created}
 
 @app.post("/api/ai/chat")
-def ai_chat(msg: ChatMessage):
-    recipes = supabase.table("recipes").select("*, categories(name)").execute().data
+def ai_chat(msg: ChatMessage, user_id: str = Depends(get_user_id)):
+    recipes = supabase.table("recipes").select("*, categories(name)").eq("user_id", user_id).execute().data
     recipe_list = "\n".join([
         f"- {r['title']} | {r.get('categories',{}).get('name','Uncategorized') if r.get('categories') else 'Uncategorized'}"
         for r in recipes
@@ -586,47 +591,47 @@ def ai_chat(msg: ChatMessage):
 # ─── Meal Planner ─────────────────────────────────────────────────────────────
 
 @app.get("/api/meal-plan")
-def get_meal_plan(week_start: Optional[str] = None):
+def get_meal_plan(week_start: Optional[str] = None, user_id: str = Depends(get_user_id)):
     ws = week_start or current_week_start()
-    entries = supabase.table("meal_plans").select("*").eq("week_start", ws).execute().data
+    entries = supabase.table("meal_plans").select("*").eq("week_start", ws).eq("user_id", user_id).execute().data
     result = []
     for e in entries:
-        recipe = sb_one(supabase.table("recipes").select("*, categories(name)").eq("id", e["recipe_id"]))
+        recipe = sb_one(supabase.table("recipes").select("*, categories(name)").eq("id", e["recipe_id"]).eq("user_id", user_id))
         result.append({**e, "recipe": enrich_recipe(recipe) if recipe else None})
     return result
 
 @app.post("/api/meal-plan", status_code=201)
-def set_meal_plan_entry(data: MealPlanEntry):
+def set_meal_plan_entry(data: MealPlanEntry, user_id: str = Depends(get_user_id)):
     ws = data.week_start or current_week_start()
-    if not sb_one(supabase.table("recipes").select("id").eq("id", data.recipe_id)):
+    if not sb_one(supabase.table("recipes").select("id").eq("id", data.recipe_id).eq("user_id", user_id)):
         raise HTTPException(status_code=404, detail="Recipe not found")
-    existing = sb_one(supabase.table("meal_plans").select("id").eq("week_start", ws).eq("day_of_week", data.day_of_week).eq("meal_slot", data.meal_slot))
+    existing = sb_one(supabase.table("meal_plans").select("id").eq("week_start", ws).eq("day_of_week", data.day_of_week).eq("meal_slot", data.meal_slot).eq("user_id", user_id))
     if existing:
         res = supabase.table("meal_plans").update({"recipe_id": data.recipe_id}).eq("id", existing["id"]).execute()
     else:
-        res = supabase.table("meal_plans").insert({"week_start": ws, "day_of_week": data.day_of_week, "meal_slot": data.meal_slot, "recipe_id": data.recipe_id}).execute()
+        res = supabase.table("meal_plans").insert({"week_start": ws, "day_of_week": data.day_of_week, "meal_slot": data.meal_slot, "recipe_id": data.recipe_id, "user_id": user_id}).execute()
     return res.data[0]
 
 @app.delete("/api/meal-plan/{entry_id}", status_code=204)
-def delete_meal_plan_entry(entry_id: int):
-    supabase.table("meal_plans").delete().eq("id", entry_id).execute()
+def delete_meal_plan_entry(entry_id: int, user_id: str = Depends(get_user_id)):
+    supabase.table("meal_plans").delete().eq("id", entry_id).eq("user_id", user_id).execute()
 
 # ─── Shopping List ────────────────────────────────────────────────────────────
 
 @app.get("/api/shopping")
-def get_shopping_list(week_start: Optional[str] = None):
+def get_shopping_list(week_start: Optional[str] = None, user_id: str = Depends(get_user_id)):
     ws = week_start or current_week_start()
-    items = supabase.table("shopping_items").select("*").eq("week_start", ws).execute().data
+    items = supabase.table("shopping_items").select("*").eq("week_start", ws).eq("user_id", user_id).execute().data
     return [{"id": i["id"], "week_start": i["week_start"], "name": i["name"], "group": i["grp"], "checked": i["checked"], "recipe_title": i.get("recipe_title")} for i in items]
 
 @app.post("/api/shopping/generate")
-def generate_shopping_list(week_start: Optional[str] = None):
+def generate_shopping_list(week_start: Optional[str] = None, user_id: str = Depends(get_user_id)):
     ws = week_start or current_week_start()
-    entries = supabase.table("meal_plans").select("recipe_id").eq("week_start", ws).execute().data
+    entries = supabase.table("meal_plans").select("recipe_id").eq("week_start", ws).eq("user_id", user_id).execute().data
     if not entries:
         raise HTTPException(status_code=400, detail="No meal plan for this week")
     recipe_ids = list({e["recipe_id"] for e in entries})
-    recipes = [sb_one(supabase.table("recipes").select("title, description, ingredients").eq("id", rid)) for rid in recipe_ids]
+    recipes = [sb_one(supabase.table("recipes").select("title, description, ingredients").eq("id", rid).eq("user_id", user_id)) for rid in recipe_ids]
     recipes = [r for r in recipes if r]
     recipe_info = "\n".join([f"- {r['title']}: {r.get('description') or 'No description'}" for r in recipes])
     result = ai_call(
@@ -638,27 +643,26 @@ def generate_shopping_list(week_start: Optional[str] = None):
         grouped = extract_json(result)
     except Exception:
         raise HTTPException(status_code=500, detail=f"AI returned invalid JSON: {result}")
-    # For AI-generated lists we don't track per-item source, set recipe_title to None
-    supabase.table("shopping_items").delete().eq("week_start", ws).execute()
+    supabase.table("shopping_items").delete().eq("week_start", ws).eq("user_id", user_id).execute()
     items = []
     for group, ingredient_list in grouped.items():
         for item_name in ingredient_list:
-            supabase.table("shopping_items").insert({"week_start": ws, "name": item_name, "grp": group, "checked": False, "recipe_title": None}).execute()
+            supabase.table("shopping_items").insert({"week_start": ws, "name": item_name, "grp": group, "checked": False, "recipe_title": None, "user_id": user_id}).execute()
             items.append({"name": item_name, "group": group})
     return {"generated": len(items), "items": items}
 
 @app.patch("/api/shopping/{item_id}/toggle")
-def toggle_shopping_item(item_id: int):
-    item = sb_one(supabase.table("shopping_items").select("*").eq("id", item_id))
+def toggle_shopping_item(item_id: int, user_id: str = Depends(get_user_id)):
+    item = sb_one(supabase.table("shopping_items").select("*").eq("id", item_id).eq("user_id", user_id))
     if not item:
         raise HTTPException(status_code=404, detail="Not found")
     updated = supabase.table("shopping_items").update({"checked": not item["checked"]}).eq("id", item_id).execute().data[0]
     return {"id": updated["id"], "week_start": updated["week_start"], "name": updated["name"], "group": updated["grp"], "checked": updated["checked"], "recipe_title": updated.get("recipe_title")}
 
 @app.post("/api/shopping/add-recipe/{recipe_id}", status_code=201)
-def add_recipe_to_shopping(recipe_id: int):
+def add_recipe_to_shopping(recipe_id: int, user_id: str = Depends(get_user_id)):
     """Add a single recipe's ingredients directly to the shopping list."""
-    recipe = sb_one(supabase.table("recipes").select("title, ingredients").eq("id", recipe_id))
+    recipe = sb_one(supabase.table("recipes").select("title, ingredients").eq("id", recipe_id).eq("user_id", user_id))
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
     ingredients = recipe.get("ingredients") or {}
@@ -672,7 +676,7 @@ def add_recipe_to_shopping(recipe_id: int):
         grp = _classify_ingredient_group(group_name, items)
         for item in (items or []):
             supabase.table("shopping_items").insert({
-                "week_start": ws, "name": str(item), "grp": grp, "checked": False, "recipe_title": recipe_title
+                "week_start": ws, "name": str(item), "grp": grp, "checked": False, "recipe_title": recipe_title, "user_id": user_id
             }).execute()
             added.append({"name": item, "group": grp})
     return {"added": len(added), "items": added}
@@ -695,21 +699,21 @@ def _classify_ingredient_group(group_name: str, items: list) -> str:
     return 'Others'
 
 @app.delete("/api/shopping", status_code=204)
-def clear_shopping_list(week_start: Optional[str] = None):
-    supabase.table("shopping_items").delete().eq("week_start", week_start or current_week_start()).execute()
+def clear_shopping_list(week_start: Optional[str] = None, user_id: str = Depends(get_user_id)):
+    supabase.table("shopping_items").delete().eq("week_start", week_start or current_week_start()).eq("user_id", user_id).execute()
 
 # ─── Today's Menu ─────────────────────────────────────────────────────────────
 
 @app.get("/api/today")
-def get_today_menu():
+def get_today_menu(user_id: str = Depends(get_user_id)):
     today = date.today()
     day_name = today.strftime("%A")
     ws = current_week_start()
-    entries = supabase.table("meal_plans").select("*").eq("week_start", ws).eq("day_of_week", day_name).execute().data
+    entries = supabase.table("meal_plans").select("*").eq("week_start", ws).eq("day_of_week", day_name).eq("user_id", user_id).execute().data
     slot_order = {"Breakfast": 0, "Lunch": 1, "Snacks": 2, "Dinner": 3}
     result = []
     for e in entries:
-        recipe = sb_one(supabase.table("recipes").select("*, categories(name)").eq("id", e["recipe_id"]))
+        recipe = sb_one(supabase.table("recipes").select("*, categories(name)").eq("id", e["recipe_id"]).eq("user_id", user_id))
         result.append({"id": e["id"], "meal_slot": e["meal_slot"], "recipe": enrich_recipe(recipe) if recipe else None})
     result.sort(key=lambda x: slot_order.get(x["meal_slot"], 99))
     return {"day": day_name, "date": today.isoformat(), "meals": result}
