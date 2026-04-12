@@ -1,0 +1,28 @@
+# Environment files
+backend/.env
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+
+# Database
+backend/*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+*.egg
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Claude
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
