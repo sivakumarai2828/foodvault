@@ -564,26 +564,18 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
           {/* Extraction loader */}
           {extracting && <ExtractionLoader />}
 
-          {/* Caption paste — only for Instagram/social links */}
+          {/* Caption paste — optional, only for social links */}
           {!extracting && isSocialUrl(url) && (
             <div>
-              {!caption && (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', background: '#fffbeb', border: '1.5px solid #fcd34d', borderRadius: 10, padding: '8px 12px', marginBottom: 8 }}>
-                  <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
-                  <p style={{ fontSize: 12, color: '#92400e', lineHeight: 1.5, margin: 0 }}>
-                    Instagram hides recipe details from servers. <strong>Paste the post caption below</strong> for accurate ingredients & steps — otherwise AI will guess.
-                  </p>
-                </div>
-              )}
               <label className="section-label" style={{ display: 'block', marginBottom: 5 }}>
-                Paste Caption <span style={{ color: caption ? '#16a34a' : 'var(--primary)', fontWeight: 600, fontSize: 10 }}>{caption ? '✓ AI will use this' : '← recommended'}</span>
+                Caption <span style={{ color: 'var(--ink-3)', fontWeight: 400, fontSize: 11 }}>(optional — paste for better accuracy)</span>
               </label>
               <textarea
-                placeholder="Open Instagram → tap ··· → Copy caption text, then paste here…"
+                placeholder="Paste post caption here for more accurate ingredients & steps…"
                 value={caption}
                 onChange={e => setCaption(e.target.value)}
-                rows={3}
-                style={{ width: '100%', resize: 'vertical', fontSize: 12.5, borderRadius: 10, border: `1.5px solid ${caption ? '#16a34a' : 'var(--primary)'}`, padding: '8px 12px', fontFamily: 'inherit', background: caption ? '#f0fdf4' : 'var(--cream)' }}
+                rows={2}
+                style={{ width: '100%', resize: 'vertical', fontSize: 12.5, borderRadius: 10, border: '1.5px solid var(--border)', padding: '8px 12px', fontFamily: 'inherit', background: 'var(--cream)' }}
               />
             </div>
           )}
@@ -614,12 +606,6 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
 
 
           {/* Extracted preview — each badge independently toggles its section */}
-          {!extracting && !!(extracted && (ingCount > 0 || stepCount > 0)) && isSocialUrl(url) && !caption && (
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#fef9c3', border: '1px solid #fde047', borderRadius: 8, padding: '6px 10px' }}>
-              <span style={{ fontSize: 13 }}>🤖</span>
-              <p style={{ fontSize: 11, color: '#713f12', margin: 0 }}>AI estimate — may not match actual recipe. Paste caption for accuracy.</p>
-            </div>
-          )}
           {!extracting && !!(extracted && (ingCount > 0 || stepCount > 0)) && (
             <div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
