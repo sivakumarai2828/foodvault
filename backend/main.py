@@ -120,13 +120,12 @@ async def fetch_page_text(url: str) -> str:
 def ai_call(prompt: str, system: str = "", max_tokens: int = 1500) -> str:
     if not ai_client:
         return "{}"
+    # Gemma models don't support system role — prepend as user text
+    full_prompt = f"{system}\n\n{prompt}" if system else prompt
     response = ai_client.chat.completions.create(
-        model="openai/gpt-oss-20b:free",
+        model="google/gemma-3-4b-it:free",
         max_tokens=max_tokens,
-        messages=[
-            {"role": "system", "content": system or "You are a helpful cooking assistant."},
-            {"role": "user", "content": prompt},
-        ],
+        messages=[{"role": "user", "content": full_prompt}],
     )
     return response.choices[0].message.content.strip()
 
@@ -136,59 +135,51 @@ def extract_json(text: str):
         return json.loads(match.group())
     return json.loads(text)
 
-async def ai_extract_recipe_details(url: str, title: str, description: str) -> dict:
-    """Extract title, ingredients (grouped), instructions, and nutrition from recipe page."""
-    # Social media pages block crawlers — skip page fetch, return empty title
+async def ai_extract_recipe_details(url: str, title: str, description: str, categories: list = None) -> dict:
+    """Extract title, ingredients (grouped), instructions, nutrition, and category from recipe page."""
     if is_social_url(url):
         page_text = ""
     else:
         page_text = await fetch_page_text(url)
     content = f"URL: {url}\nTitle: {title}\nDescription: {description}\nPage content: {page_text}" if page_text else f"URL: {url}\nTitle: {title}\nDescription: {description}"
+    cat_list = ", ".join(c["name"] for c in categories) if categories else ""
+    cat_instruction = f'- "category": Pick the single best match from: {cat_list}. Return exact name.\n' if cat_list else ""
 
     result = ai_call(
-        f"""Analyze this recipe content and extract structured data:
+        f"""Extract recipe data from this content:
 
 {content}
 
-Return ONLY a JSON object with this exact structure:
-{{
-  "title": "Proper Recipe Name",
-  "ingredients": {{
-    "GroupName": ["ingredient with quantity", "..."],
-    "AnotherGroup": ["ingredient", "..."]
-  }},
-  "instructions": [
-    "Step 1 description",
-    "Step 2 description"
-  ],
-  "nutrition": {{
-    "calories": 350,
-    "protein": 25,
-    "carbs": 40,
-    "fat": 12
-  }}
-}}
+Return ONLY JSON:
+{{"title":"Dish Name","category":"CategoryName","ingredients":{{"Group":["item","..."]}},"instructions":["Step 1","..."],"nutrition":{{"calories":350,"protein":25,"carbs":40,"fat":12}}}}
 
 Rules:
-- "title": Extract the actual dish name (e.g. "Butter Chicken", "Cheesy Flatbread"). NEVER use URL params or generic phrases. If unclear, infer from context.
-- "ingredients": Extract if listed. If NOT listed in the content, INFER reasonable ingredients for this dish based on the title and any context clues. Always return at least a basic ingredient list — never return an empty object.
-- "instructions": Extract if listed. If NOT listed, write standard preparation steps for this type of dish based on the title. Always return at least 3–5 steps — never return an empty array.
-- Group ingredients logically (e.g. "Marinade", "Sauce", "For the dough", "Main"). If only one group, use "Ingredients" as the key.
-- "nutrition": Estimate reasonable per-serving values based on the dish type. Always provide all four fields.
-- Return ONLY valid JSON, no explanation or markdown.""",
-        system="You are a recipe data extraction expert. When recipe details are not explicitly provided, intelligently infer them from the dish name and context. Always return complete, useful recipe data. Return valid JSON only.",
-        max_tokens=2000
+- title: actual dish name, never URL params
+- {cat_instruction}- ingredients: infer if not listed, always return at least basics, group logically
+- instructions: infer if not listed, at least 3 steps
+- nutrition: estimate per serving, always all 4 fields
+Return ONLY valid JSON.""",
+        system="Recipe extraction expert. Return valid JSON only.",
+        max_tokens=1200
     )
     try:
         data = extract_json(result)
+        # Normalise nutrition — model sometimes returns strings like "300-350"
+        raw_nut = data.get("nutrition", {}) or {}
+        def to_int(v):
+            if isinstance(v, (int, float)): return int(v)
+            m = re.search(r'\d+', str(v))
+            return int(m.group()) if m else 0
+        nutrition = {k: to_int(raw_nut.get(k, 0)) for k in ("calories", "protein", "carbs", "fat")}
         return {
             "title":        data.get("title", ""),
+            "category":     data.get("category", ""),
             "ingredients":  data.get("ingredients", {}),
             "instructions": data.get("instructions", []),
-            "nutrition":    data.get("nutrition", {}),
+            "nutrition":    nutrition,
         }
     except Exception:
-        return {"title": "", "ingredients": {}, "instructions": [], "nutrition": {}}
+        return {"title": "", "category": "", "ingredients": {}, "instructions": [], "nutrition": {}}
 
 def sb_one(query) -> Optional[dict]:
     """Execute a Supabase query and return the first matching row as dict, or None."""
@@ -351,34 +342,29 @@ async def image_proxy(url: str):
 async def preview_link(url: str):
     return await fetch_link_preview(url)
 
-def suggest_category_id(title: str, categories: list) -> Optional[int]:
-    """Use AI to match recipe title to a category, return category id or None."""
-    if not categories or not title:
+def suggest_category_id(category_name: str, categories: list) -> Optional[int]:
+    """Match extracted category name to a category id (no extra AI call)."""
+    if not categories or not category_name:
         return None
-    cat_names = [c["name"] for c in categories]
-    result = ai_call(
-        f"Recipe: {title}\nCategories: {', '.join(cat_names)}\nWhich single category best fits? Reply with just the category name.",
-        system="You are a food categorization assistant.",
-        max_tokens=50
-    )
-    matched = next((c for c in categories if c["name"].lower() == result.strip().lower()), None)
+    matched = next((c for c in categories if c["name"].lower() == category_name.strip().lower()), None)
     return matched["id"] if matched else None
 
 @app.get("/api/extract")
 async def extract_recipe(url: str):
     """Fetch preview + AI-extract full recipe details (title, ingredients, instructions, nutrition)."""
     categories = supabase.table("categories").select("*").order("name").execute().data
-    preview = await fetch_link_preview(url)
 
     if is_social_url(url):
-        social = await fetch_social_caption(url)
-        # Use yt-dlp thumbnail (real food image) over microlink logo
-        # yt-dlp gives the actual reel food image; microlink often returns the app logo
+        # Run yt-dlp and link preview in parallel
+        social, preview = await asyncio.gather(
+            fetch_social_caption(url),
+            fetch_link_preview(url)
+        )
         thumbnail = social["thumbnail"] or preview["thumbnail"]
         caption = social["caption"]
-        details = await ai_extract_recipe_details(url, "", caption)
+        details = await ai_extract_recipe_details(url, "", caption, categories)
         title = details.get("title") or ""
-        cat_id = suggest_category_id(title, categories)
+        cat_id = suggest_category_id(details.get("category", ""), categories)
         return {
             "title": title,
             "thumbnail": thumbnail,
@@ -389,12 +375,13 @@ async def extract_recipe(url: str):
             "suggested_category_id": cat_id,
         }
 
-    details = await ai_extract_recipe_details(url, preview["title"], preview["description"])
+    preview = await fetch_link_preview(url)
+    details = await ai_extract_recipe_details(url, preview["title"], preview["description"], categories)
     final_title = details.get("title") or preview["title"]
     if is_junk_title(preview["title"]) and details.get("title"):
         final_title = details["title"]
-    cat_id = suggest_category_id(final_title, categories)
-    return {**preview, "title": final_title, **{k: v for k, v in details.items() if k != "title"}, "suggested_category_id": cat_id}
+    cat_id = suggest_category_id(details.get("category", ""), categories)
+    return {**preview, "title": final_title, **{k: v for k, v in details.items() if k not in ("title", "category")}, "suggested_category_id": cat_id}
 
 # ─── Recipes ──────────────────────────────────────────────────────────────────
 
