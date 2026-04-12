@@ -27,7 +27,7 @@ export const updateRecipe = (id, data) => api.patch(`/recipes/${id}`, data).then
 export const reExtractRecipe = (url) => api.get('/extract', { params: { url } }).then(r => r.data)
 export const deleteRecipe = (id) => api.delete(`/recipes/${id}`)
 export const previewLink  = (url) => api.get('/preview', { params: { url } }).then(r => r.data)
-export const extractRecipe = (url) => api.get('/extract', { params: { url } }).then(r => r.data)
+export const extractRecipe = (url, caption = '') => api.get('/extract', { params: caption ? { url, caption } : { url } }).then(r => r.data)
 export const extractFromText = (text, title) => api.post('/extract-from-text', { text, title }).then(r => r.data)
 export const imageProxyUrl = (url) => url ? `${BASE}/image-proxy?url=${encodeURIComponent(url)}` : null
 

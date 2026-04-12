@@ -354,9 +354,12 @@ function RecipeDetailModal({ recipe: initialRecipe, onClose, onUpdated }) {
 const SOCIAL_DOMAINS = ['instagram.com', 'tiktok.com', 'facebook.com', 'fb.com', 'fb.watch']
 const isSocialUrl = (u) => SOCIAL_DOMAINS.some(d => u.includes(d))
 
+const isSocialUrl = (u) => ['instagram.com','tiktok.com','facebook.com','fb.watch'].some(d => u.includes(d))
+
 function AddRecipeModal({ categories, onClose, onAdded }) {
   const toast = useToast()
   const [url, setUrl] = useState('')
+  const [caption, setCaption] = useState('')
   const [title, setTitle] = useState('')
   const [thumbnail, setThumbnail] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -392,7 +395,7 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
     setExtracting(true)
     setNeedsTitle(false)
     try {
-      const data = await extractRecipe(url.trim())
+      const data = await extractRecipe(url.trim(), caption.trim())
       if (data.thumbnail) setThumbnail(data.thumbnail)
       if (data.title && !isJunkTitle(data.title)) {
         setTitle(data.title)
@@ -462,6 +465,22 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
             <p style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 5 }}>AI will auto-extract ingredients, instructions & nutrition</p>
           </div>
 
+          {/* Caption paste — only for Instagram/social links */}
+          {isSocialUrl(url) && (
+            <div>
+              <label className="section-label" style={{ display: 'block', marginBottom: 5 }}>
+                Paste Caption <span style={{ color: 'var(--ink-3)', fontWeight: 400 }}>(optional — for accurate ingredients)</span>
+              </label>
+              <textarea
+                placeholder="Copy the post description from Instagram and paste here…"
+                value={caption}
+                onChange={e => setCaption(e.target.value)}
+                rows={3}
+                style={{ width: '100%', resize: 'vertical', fontSize: 12.5, borderRadius: 10, border: '1.5px solid var(--border)', padding: '8px 12px', fontFamily: 'inherit', background: 'var(--cream)' }}
+              />
+            </div>
+          )}
+
           {/* Preview thumbnail */}
           {thumbnail && (
             <div style={{ borderRadius: 14, overflow: 'hidden', height: 150, position: 'relative' }}>
@@ -500,9 +519,9 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
                 <span style={{ fontSize: 11, color: 'var(--ink-3)', alignSelf: 'center' }}>{showPreview ? '▲ hide' : '▼ preview'}</span>
               </div>
               {showPreview && (
-                <div style={{ marginTop: 10, background: 'var(--cream)', borderRadius: 12, padding: '12px 14px', border: '1px solid var(--border)', maxHeight: 220, overflowY: 'auto' }}>
+                <div style={{ marginTop: 10, background: 'var(--cream)', borderRadius: 12, padding: '12px 14px', border: '1px solid var(--border)', maxHeight: 260, overflowY: 'auto' }}>
                   {ingCount > 0 && (
-                    <div style={{ marginBottom: stepCount > 0 ? 12 : 0 }}>
+                    <div style={{ marginBottom: 12 }}>
                       <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Ingredients</p>
                       {Object.entries(extracted.ingredients).map(([group, items]) => (
                         <div key={group} style={{ marginBottom: 6 }}>
@@ -515,11 +534,29 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
                     </div>
                   )}
                   {stepCount > 0 && (
-                    <div>
+                    <div style={{ marginBottom: extracted.nutrition?.calories ? 12 : 0 }}>
                       <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Steps</p>
                       {extracted.instructions.map((step, i) => (
                         <p key={i} style={{ fontSize: 12.5, color: 'var(--ink)', lineHeight: 1.6, marginBottom: 4 }}><strong>{i + 1}.</strong> {step}</p>
                       ))}
+                    </div>
+                  )}
+                  {extracted.nutrition?.calories > 0 && (
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Nutrition (per serving)</p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                        {[
+                          { label: 'Calories', value: extracted.nutrition.calories, unit: 'kcal', color: 'var(--primary)' },
+                          { label: 'Protein',  value: extracted.nutrition.protein,  unit: 'g', color: '#E84C8B' },
+                          { label: 'Carbs',    value: extracted.nutrition.carbs,    unit: 'g', color: '#F4B942' },
+                          { label: 'Fat',      value: extracted.nutrition.fat,      unit: 'g', color: '#5C7A5A' },
+                        ].map(n => (
+                          <div key={n.label} style={{ background: '#fff', borderRadius: 8, padding: '6px 10px', border: '1px solid var(--border)' }}>
+                            <p style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 1 }}>{n.label}</p>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: n.color }}>{n.value}{n.unit}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

@@ -350,7 +350,7 @@ def suggest_category_id(category_name: str, categories: list) -> Optional[int]:
     return matched["id"] if matched else None
 
 @app.get("/api/extract")
-async def extract_recipe(url: str):
+async def extract_recipe(url: str, caption: Optional[str] = None):
     """Fetch preview + AI-extract full recipe details (title, ingredients, instructions, nutrition)."""
     categories = supabase.table("categories").select("*").order("name").execute().data
 
@@ -361,7 +361,8 @@ async def extract_recipe(url: str):
             fetch_link_preview(url)
         )
         thumbnail = social["thumbnail"] or preview["thumbnail"]
-        caption = social["caption"]
+        # Use user-pasted caption if provided, else fall back to yt-dlp
+        caption = (caption or social["caption"] or "").strip()
         details = await ai_extract_recipe_details(url, "", caption, categories)
         title = details.get("title") or ""
         cat_id = suggest_category_id(details.get("category", ""), categories)
