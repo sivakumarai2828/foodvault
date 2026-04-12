@@ -78,21 +78,6 @@ function LoginCard({ loading, error, btnHover, setBtnHover, onLogin }) {
 
       {error && <p style={{ marginTop: 12, fontSize: 13, color: '#dc2626', textAlign: 'center' }}>{error}</p>}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', margin: '20px 0' }}>
-        <div style={{ flex: 1, borderTop: '1px solid #f3f4f6' }} />
-        <span style={{ fontSize: 12, color: '#d1d5db', fontWeight: 500 }}>or</span>
-        <div style={{ flex: 1, borderTop: '1px solid #f3f4f6' }} />
-      </div>
-
-      <button disabled style={{
-        width: '100%', padding: '13px 20px', borderRadius: 14,
-        border: '1.5px dashed #e5e7eb', background: '#fafafa',
-        cursor: 'not-allowed', fontFamily: 'inherit',
-        fontSize: 13.5, fontWeight: 500, color: '#9ca3af',
-      }}>
-        Continue with Email — coming soon
-      </button>
-
       <div style={{
         marginTop: 20, padding: '11px 16px',
         background: '#f0fdf4', borderRadius: 12,
@@ -187,45 +172,6 @@ export default function LoginView() {
             }}>✦ Powered by SKorbits</span>
           </div>
 
-          {/* QR Code — get the app on mobile */}
-          <div style={{
-            marginTop: 32, display: 'flex', alignItems: 'center', gap: 18,
-            background: '#fff', border: '1.5px solid #fed7aa',
-            borderRadius: 20, padding: '16px 20px',
-            boxShadow: '0 4px 16px rgba(249,115,22,.08)',
-            maxWidth: 340,
-          }}>
-            <div style={{
-              background: '#fff', padding: 8, borderRadius: 12,
-              border: '1.5px solid #fed7aa', flexShrink: 0,
-            }}>
-              <QRCodeSVG
-                value={APP_URL}
-                size={80}
-                fgColor="#1c0f00"
-                bgColor="#ffffff"
-                level="M"
-              />
-            </div>
-            <div>
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#1c0f00', marginBottom: 4 }}>
-                Get the app on your phone
-              </p>
-              <p style={{ fontSize: 11.5, color: '#92400e', lineHeight: 1.6, marginBottom: 8 }}>
-                Scan with your camera to open FoodVault on iOS or Android
-              </p>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <span style={{
-                  fontSize: 10, fontWeight: 600, padding: '3px 8px',
-                  borderRadius: 6, background: '#000', color: '#fff',
-                }}>🍎 iOS</span>
-                <span style={{
-                  fontSize: 10, fontWeight: 600, padding: '3px 8px',
-                  borderRadius: 6, background: '#3ddc84', color: '#000',
-                }}>🤖 Android</span>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Right */}
@@ -235,8 +181,35 @@ export default function LoginView() {
           padding: '48px 40px',
           animation: 'slideInRight .6s ease both',
         }}>
-          <div style={{ width: '100%', maxWidth: 380 }}>
+          <div style={{ width: '100%', maxWidth: 380, display: 'flex', flexDirection: 'column', gap: 20 }}>
             <LoginCard loading={loading} error={error} btnHover={btnHover} setBtnHover={setBtnHover} onLogin={handleGoogleLogin} />
+
+            {/* QR Code — below the login card */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 16,
+              background: '#fff', border: '1.5px solid #fed7aa',
+              borderRadius: 20, padding: '14px 18px',
+              boxShadow: '0 4px 16px rgba(249,115,22,.08)',
+            }}>
+              <div style={{
+                background: '#fff', padding: 6, borderRadius: 10,
+                border: '1.5px solid #fed7aa', flexShrink: 0,
+              }}>
+                <QRCodeSVG value={APP_URL} size={70} fgColor="#1c0f00" bgColor="#ffffff" level="M" />
+              </div>
+              <div>
+                <p style={{ fontSize: 12.5, fontWeight: 700, color: '#1c0f00', marginBottom: 3 }}>
+                  Get the app on your phone
+                </p>
+                <p style={{ fontSize: 11, color: '#92400e', lineHeight: 1.55, marginBottom: 7 }}>
+                  Scan to open on iOS or Android
+                </p>
+                <div style={{ display: 'flex', gap: 5 }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 6, background: '#000', color: '#fff' }}>🍎 iOS</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 6, background: '#3ddc84', color: '#000' }}>🤖 Android</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
