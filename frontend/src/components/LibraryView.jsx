@@ -350,6 +350,104 @@ function RecipeDetailModal({ recipe: initialRecipe, onClose, onUpdated }) {
   )
 }
 
+// ─── Extraction Loader ────────────────────────────────────────────────────────
+
+const EXTRACT_STEPS = [
+  { icon: '🔗', text: 'Fetching the recipe link…' },
+  { icon: '🍳', text: 'Reading the ingredients…' },
+  { icon: '📋', text: 'Extracting cooking steps…' },
+  { icon: '🔥', text: 'Calculating nutrition…' },
+  { icon: '✨', text: 'Almost ready…' },
+]
+
+function ExtractionLoader() {
+  const [step, setStep] = useState(0)
+  const [progress, setProgress] = useState(0)
+
+  useEffect(() => {
+    // Progress bar fills over ~10s
+    const progressInterval = setInterval(() => {
+      setProgress(p => Math.min(p + 1, 92))
+    }, 100)
+
+    // Rotate messages every 2s
+    const stepInterval = setInterval(() => {
+      setStep(s => (s + 1) % EXTRACT_STEPS.length)
+    }, 2000)
+
+    return () => { clearInterval(progressInterval); clearInterval(stepInterval) }
+  }, [])
+
+  const current = EXTRACT_STEPS[step]
+
+  return (
+    <div style={{
+      borderRadius: 16,
+      background: 'linear-gradient(135deg, #fff8f5 0%, #fff4ee 100%)',
+      border: '1.5px solid #ffe0d0',
+      padding: '20px 18px',
+      textAlign: 'center',
+    }}>
+      {/* Animated icon */}
+      <div style={{
+        fontSize: 36,
+        marginBottom: 10,
+        display: 'inline-block',
+        animation: 'extractBounce 0.6s ease',
+      }}>
+        {current.icon}
+      </div>
+
+      {/* Rotating message */}
+      <p style={{
+        fontSize: 14,
+        fontWeight: 600,
+        color: 'var(--ink)',
+        marginBottom: 4,
+        minHeight: 22,
+        transition: 'opacity 0.3s',
+      }}>
+        {current.text}
+      </p>
+      <p style={{ fontSize: 11.5, color: 'var(--ink-3)', marginBottom: 14 }}>
+        Powered by AI — usually takes 8–12 seconds
+      </p>
+
+      {/* Progress bar */}
+      <div style={{ background: '#f0e8e0', borderRadius: 99, height: 6, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%',
+          width: `${progress}%`,
+          borderRadius: 99,
+          background: 'linear-gradient(90deg, var(--primary), #f97316)',
+          transition: 'width 0.1s linear',
+        }} />
+      </div>
+
+      {/* Step dots */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+        {EXTRACT_STEPS.map((s, i) => (
+          <div key={i} style={{
+            width: i === step ? 18 : 6,
+            height: 6,
+            borderRadius: 99,
+            background: i === step ? 'var(--primary)' : '#e0d4cc',
+            transition: 'all 0.3s ease',
+          }} />
+        ))}
+      </div>
+
+      <style>{`
+        @keyframes extractBounce {
+          0%   { transform: scale(0.7) rotate(-10deg); opacity: 0; }
+          60%  { transform: scale(1.15) rotate(5deg); opacity: 1; }
+          100% { transform: scale(1) rotate(0deg); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 // ─── Add Recipe Modal ─────────────────────────────────────────────────────────
 const SOCIAL_DOMAINS = ['instagram.com', 'tiktok.com', 'facebook.com', 'fb.com', 'fb.watch']
 const isSocialUrl = (u) => SOCIAL_DOMAINS.some(d => u.includes(d))
@@ -457,14 +555,17 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
             <div style={{ display: 'flex', gap: 8 }}>
               <input placeholder="Paste any link — Instagram, YouTube, TikTok…" value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleExtract()} />
               <button className="btn btn-primary" onClick={handleExtract} disabled={extracting || !url.trim()} style={{ flexShrink: 0, borderRadius: 12, minWidth: 90 }}>
-                {extracting ? <><span className="spinner" /> Extracting…</> : '✦ Extract'}
+                {extracting ? '⏳' : '✦ Extract'}
               </button>
             </div>
             <p style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 5 }}>AI will auto-extract ingredients, instructions & nutrition</p>
           </div>
 
+          {/* Extraction loader */}
+          {extracting && <ExtractionLoader />}
+
           {/* Caption paste — only for Instagram/social links */}
-          {isSocialUrl(url) && (
+          {!extracting && isSocialUrl(url) && (
             <div>
               <label className="section-label" style={{ display: 'block', marginBottom: 5 }}>
                 Paste Caption <span style={{ color: 'var(--ink-3)', fontWeight: 400 }}>(optional — for accurate ingredients)</span>
@@ -480,7 +581,7 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
           )}
 
           {/* Preview thumbnail */}
-          {thumbnail && (
+          {!extracting && thumbnail && (
             <div style={{ borderRadius: 14, overflow: 'hidden', height: 150, position: 'relative' }}>
               <img src={imageProxyUrl(thumbnail)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.parentElement.style.display = 'none' }} />
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,.3),transparent 50%)' }} />
@@ -493,7 +594,7 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
               >✎ Change photo</button>
             </div>
           )}
-          {!thumbnail && (
+          {!extracting && !thumbnail && (
             <button
               onClick={() => {
                 const newUrl = prompt('Paste an image URL:')
@@ -505,7 +606,7 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
 
 
           {/* Extracted preview — each badge independently toggles its section */}
-          {!!(extracted && (ingCount > 0 || stepCount > 0)) && (
+          {!extracting && !!(extracted && (ingCount > 0 || stepCount > 0)) && (
             <div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {ingCount > 0 && (
