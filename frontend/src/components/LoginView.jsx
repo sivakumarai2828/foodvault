@@ -1,5 +1,8 @@
 import { useState } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 import { signInWithGoogle } from '../lib/supabase'
+
+const APP_URL = typeof window !== 'undefined' ? window.location.origin : 'https://foodvault-app.web.app'
 
 const FEATURES = [
   { icon: '📱', bg: '#fff7ed', border: '#fed7aa', title: 'Save from anywhere', desc: 'Paste any link — Instagram, YouTube, blogs — and get the full recipe.' },
@@ -175,13 +178,53 @@ export default function LoginView() {
             ))}
           </div>
 
-          <div style={{ marginTop: 40 }}>
+          <div style={{ marginTop: 40, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               fontSize: 11.5, fontWeight: 600, color: '#c2410c',
               background: 'rgba(249,115,22,.1)', border: '1.5px solid rgba(249,115,22,.25)',
               borderRadius: 20, padding: '5px 14px',
             }}>✦ Powered by SKorbits</span>
+          </div>
+
+          {/* QR Code — get the app on mobile */}
+          <div style={{
+            marginTop: 32, display: 'flex', alignItems: 'center', gap: 18,
+            background: '#fff', border: '1.5px solid #fed7aa',
+            borderRadius: 20, padding: '16px 20px',
+            boxShadow: '0 4px 16px rgba(249,115,22,.08)',
+            maxWidth: 340,
+          }}>
+            <div style={{
+              background: '#fff', padding: 8, borderRadius: 12,
+              border: '1.5px solid #fed7aa', flexShrink: 0,
+            }}>
+              <QRCodeSVG
+                value={APP_URL}
+                size={80}
+                fgColor="#1c0f00"
+                bgColor="#ffffff"
+                level="M"
+              />
+            </div>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#1c0f00', marginBottom: 4 }}>
+                Get the app on your phone
+              </p>
+              <p style={{ fontSize: 11.5, color: '#92400e', lineHeight: 1.6, marginBottom: 8 }}>
+                Scan with your camera to open FoodVault on iOS or Android
+              </p>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <span style={{
+                  fontSize: 10, fontWeight: 600, padding: '3px 8px',
+                  borderRadius: 6, background: '#000', color: '#fff',
+                }}>🍎 iOS</span>
+                <span style={{
+                  fontSize: 10, fontWeight: 600, padding: '3px 8px',
+                  borderRadius: 6, background: '#3ddc84', color: '#000',
+                }}>🤖 Android</span>
+              </div>
+            </div>
           </div>
         </div>
 
