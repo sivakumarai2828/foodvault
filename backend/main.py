@@ -120,12 +120,14 @@ async def fetch_page_text(url: str) -> str:
 def ai_call(prompt: str, system: str = "", max_tokens: int = 1500) -> str:
     if not ai_client:
         return "{}"
-    # Gemma models don't support system role — prepend as user text
-    full_prompt = f"{system}\n\n{prompt}" if system else prompt
+    messages = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
     response = ai_client.chat.completions.create(
-        model="google/gemma-3-4b-it:free",
+        model="openai/gpt-oss-20b:free",
         max_tokens=max_tokens,
-        messages=[{"role": "user", "content": full_prompt}],
+        messages=messages,
     )
     return response.choices[0].message.content.strip()
 
