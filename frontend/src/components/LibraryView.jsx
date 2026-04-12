@@ -467,17 +467,36 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
             <div style={{ borderRadius: 14, overflow: 'hidden', height: 150, position: 'relative' }}>
               <img src={imageProxyUrl(thumbnail)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.parentElement.style.display = 'none' }} />
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,.3),transparent 50%)' }} />
+              <button
+                onClick={() => {
+                  const newUrl = prompt('Paste a new image URL:', thumbnail)
+                  if (newUrl && newUrl.trim()) setThumbnail(newUrl.trim())
+                }}
+                style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 11, padding: '4px 10px', cursor: 'pointer' }}
+              >✎ Change photo</button>
             </div>
+          )}
+          {!thumbnail && (
+            <button
+              onClick={() => {
+                const newUrl = prompt('Paste an image URL:')
+                if (newUrl && newUrl.trim()) setThumbnail(newUrl.trim())
+              }}
+              style={{ background: 'var(--cream-2)', border: '1.5px dashed var(--border)', borderRadius: 14, height: 60, width: '100%', color: 'var(--ink-3)', fontSize: 13, cursor: 'pointer' }}
+            >+ Add photo (optional)</button>
           )}
 
 
           {/* Extracted preview — clickable badges + expandable detail */}
-          {!!(extracted && (ingCount > 0 || stepCount > 0 || extracted.nutrition?.calories)) && (
+          {!!(extracted && (ingCount > 0 || stepCount > 0)) && (
             <div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', cursor: 'pointer' }} onClick={() => setShowPreview(p => !p)}>
                 {ingCount > 0 && <span className="badge badge-green" style={{ cursor: 'pointer' }}>🥄 {ingCount} ingredients</span>}
                 {stepCount > 0 && <span className="badge badge-gold" style={{ cursor: 'pointer' }}>📋 {stepCount} steps</span>}
-                {!!extracted.nutrition?.calories && <span className="badge badge-red">🔥 {extracted.nutrition.calories} kcal</span>}
+                {extracted.nutrition?.calories
+                  ? <span className="badge badge-red">🔥 {extracted.nutrition.calories} kcal</span>
+                  : <span className="badge" style={{ background: 'var(--cream-2)', color: 'var(--ink-3)', cursor: 'default' }}>nutrition preview</span>
+                }
                 <span style={{ fontSize: 11, color: 'var(--ink-3)', alignSelf: 'center' }}>{showPreview ? '▲ hide' : '▼ preview'}</span>
               </div>
               {showPreview && (
