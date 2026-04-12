@@ -354,8 +354,6 @@ function RecipeDetailModal({ recipe: initialRecipe, onClose, onUpdated }) {
 const SOCIAL_DOMAINS = ['instagram.com', 'tiktok.com', 'facebook.com', 'fb.com', 'fb.watch']
 const isSocialUrl = (u) => SOCIAL_DOMAINS.some(d => u.includes(d))
 
-const isSocialUrl = (u) => ['instagram.com','tiktok.com','facebook.com','fb.watch'].some(d => u.includes(d))
-
 function AddRecipeModal({ categories, onClose, onAdded }) {
   const toast = useToast()
   const [url, setUrl] = useState('')
