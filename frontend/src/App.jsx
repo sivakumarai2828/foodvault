@@ -209,7 +209,7 @@ export default function App() {
                   }}
                 >
                   {user.user_metadata?.avatar_url
-                    ? <img src={user.user_metadata.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <img src={user.user_metadata.avatar_url} alt="avatar" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
                     : <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary)' }}>
                         {(user.user_metadata?.full_name || user.email || '?')[0].toUpperCase()}
                       </span>

@@ -21,6 +21,7 @@ const CAT_EMOJI_MAP = {
   pizza: '🍕', burger: '🍔', sandwich: '🥪',
   paneer: '🧀', tofu: '🧀',
 }
+
 const getCategoryEmoji = (name = '') => {
   const lower = name.toLowerCase()
   return Object.entries(CAT_EMOJI_MAP).find(([k]) => lower.includes(k))?.[1] || '🍽️'
@@ -176,6 +177,17 @@ function RecipeDetailModal({ recipe: initialRecipe, onClose, onUpdated }) {
             background: 'rgba(0,0,0,.4)', border: 'none', color: '#fff', fontSize: 16,
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>✕</button>
+          <button onClick={async () => {
+            const newUrl = prompt('Paste a food image URL:')
+            if (newUrl?.trim()) {
+              await updateRecipe(recipe.id, { thumbnail: newUrl.trim() })
+              onUpdated({ ...recipe, thumbnail: newUrl.trim() })
+            }
+          }} style={{
+            position: 'absolute', bottom: 10, right: 10,
+            background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none',
+            borderRadius: 8, fontSize: 11, padding: '5px 10px', cursor: 'pointer',
+          }}>✎ Change photo</button>
           {recipe.cooked && (
             <div style={{ position: 'absolute', top: 12, left: 12 }}>
               <span className="badge badge-green">✓ Cooked</span>
@@ -580,29 +592,6 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
           {/* Extraction loader */}
           {extracting && <ExtractionLoader />}
 
-          {/* Caption paste — only for social links */}
-          {!extracting && isSocialUrl(url) && (
-            <div>
-              <label className="section-label" style={{ display: 'block', marginBottom: 6 }}>
-                Paste Caption
-                <span style={{ color: 'var(--ink-3)', fontWeight: 400, fontSize: 11, marginLeft: 6 }}>for ingredients & steps</span>
-              </label>
-              {/* How-to steps */}
-              <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-                {['1. Open Instagram post', '2. Tap ···', '3. Copy', '4. Paste here'].map((s, i) => (
-                  <span key={i} style={{ fontSize: 11, background: i === 3 ? 'var(--primary-bg)' : 'var(--cream-2)', color: i === 3 ? 'var(--primary)' : 'var(--ink-3)', borderRadius: 6, padding: '3px 8px', fontWeight: 500, border: `1px solid ${i === 3 ? 'var(--primary)' : 'var(--border)'}` }}>{s}</span>
-                ))}
-              </div>
-              <textarea
-                placeholder="Paste the caption text here…"
-                value={caption}
-                onChange={e => setCaption(e.target.value)}
-                rows={2}
-                style={{ width: '100%', resize: 'vertical', fontSize: 12.5, borderRadius: 10, border: `1.5px solid ${caption ? '#16a34a' : 'var(--border)'}`, padding: '8px 12px', fontFamily: 'inherit', background: caption ? '#f0fdf4' : 'var(--cream)' }}
-              />
-              {caption && <p style={{ fontSize: 11, color: '#16a34a', marginTop: 4 }}>✓ Caption added — click Extract again for full details</p>}
-            </div>
-          )}
 
           {/* Preview thumbnail */}
           {!extracting && thumbnail && (
@@ -720,7 +709,7 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
             {addingCat ? (
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
-                  placeholder="New category name…"
+                  placeholder="e.g. Biryani, Snacks, Desserts…"
                   value={newCatInput}
                   onChange={e => setNewCatInput(e.target.value)}
                   autoFocus
@@ -733,7 +722,7 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
                         setNewCatInput(''); setAddingCat(false)
                         toast('Category added!', 'success')
                       } catch { toast('Already exists', 'error') }
-                    } else if (e.key === 'Escape') { setAddingCat(false) }
+                    } else if (e.key === 'Escape') { setAddingCat(false); setNewCatInput('') }
                   }}
                 />
                 <button className="btn btn-primary btn-sm" style={{ flexShrink: 0 }} onClick={async () => {
@@ -746,16 +735,18 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
                     toast('Category added!', 'success')
                   } catch { toast('Already exists', 'error') }
                 }}>Add</button>
-                <button className="btn btn-ghost btn-sm" onClick={() => setAddingCat(false)}>✕</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => { setAddingCat(false); setNewCatInput('') }}>✕</button>
               </div>
             ) : (
-              <div style={{ display: 'flex', gap: 8 }}>
-                <select value={categoryId} onChange={e => { if (e.target.value === '__new__') { setAddingCat(true) } else { setCategoryId(e.target.value) } }} style={{ flex: 1 }}>
-                  <option value="">— Select category —</option>
-                  {localCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  <option value="__new__">+ Add new category…</option>
-                </select>
-              </div>
+              <button
+                className="btn btn-secondary"
+                style={{ width: '100%', borderRadius: 12, justifyContent: 'center' }}
+                onClick={() => setAddingCat(true)}
+              >
+                {categoryId
+                  ? `✓ ${localCategories.find(c => String(c.id) === categoryId)?.name || 'Category selected'}`
+                  : '+ Add Category'}
+              </button>
             )}
           </div>
 
