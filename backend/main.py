@@ -211,6 +211,10 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="FoodVault API", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
+@app.get("/health")
+def health():
+    return {"status": "ok", "service": "FoodVault API"}
+
 async def get_user_id(authorization: Optional[str] = Header(None)) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated")
