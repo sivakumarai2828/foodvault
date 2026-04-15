@@ -5,9 +5,9 @@ import { signInWithGoogle } from '../lib/supabase'
 const APP_URL = typeof window !== 'undefined' ? window.location.origin : 'https://foodvault-app.web.app'
 
 const FEATURES = [
-  { icon: '📱', bg: '#fff7ed', border: '#fed7aa', title: 'Save from anywhere', desc: 'Paste any link — Instagram, YouTube, blogs — and get the full recipe.' },
-  { icon: '🗓️', bg: '#f0fdf4', border: '#bbf7d0', title: 'Plan your week',     desc: 'Drop recipes onto a weekly calendar. AI can fill the whole week in one tap.' },
-  { icon: '🛒', bg: '#fffbeb', border: '#fde68a', title: 'Auto shopping list',  desc: 'Your meal plan becomes a categorised grocery list automatically.' },
+  { icon: '📱', bg: '#fff7ed', border: '#fed7aa', title: 'Save from anywhere', desc: 'Paste any link — Instagram, YouTube, blogs — and AI extracts the full recipe.' },
+  { icon: '🗂️', bg: '#f0fdf4', border: '#bbf7d0', title: 'Organise your way',  desc: 'Browse recipes by category. Filter, search, and find what you want in seconds.' },
+  { icon: '🍽️', bg: '#fff1f2', border: '#fecdd3', title: 'Cook with confidence', desc: 'Step-by-step instructions, ingredients, and nutrition — all in one place.' },
   { icon: '✦',  bg: '#faf5ff', border: '#ddd6fe', title: 'AI cooking assistant', desc: 'Ask anything — substitutions, scaling, what to cook with what you have.' },
 ]
 

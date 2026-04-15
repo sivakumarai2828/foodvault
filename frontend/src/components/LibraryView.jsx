@@ -5,6 +5,27 @@ import { getRecipes, getCategories, createRecipe, updateRecipe, deleteRecipe,
 import { useToast } from '../App'
 import CookingMode from './CookingMode'
 
+// ─── Category emoji mapping ───────────────────────────────────────────────────
+const CAT_EMOJI_MAP = {
+  biryani: '🍚', rice: '🍚', fried: '🍳',
+  curry: '🍛', curries: '🍛', gravy: '🍛',
+  chicken: '🍗', mutton: '🥩', beef: '🥩', lamb: '🥩',
+  fish: '🐟', seafood: '🦐', prawn: '🦐',
+  veg: '🥗', vegetarian: '🥗', salad: '🥗',
+  breakfast: '🍳', snack: '🫙', snacks: '🫙',
+  dessert: '🍰', sweet: '🍰', cake: '🎂',
+  soup: '🍲', dal: '🍲', lentil: '🍲',
+  pasta: '🍝', noodle: '🍜', noodles: '🍜',
+  bread: '🍞', roti: '🫓', paratha: '🫓',
+  drink: '🥤', juice: '🥤', smoothie: '🥤',
+  pizza: '🍕', burger: '🍔', sandwich: '🥪',
+  paneer: '🧀', tofu: '🧀',
+}
+const getCategoryEmoji = (name = '') => {
+  const lower = name.toLowerCase()
+  return Object.entries(CAT_EMOJI_MAP).find(([k]) => lower.includes(k))?.[1] || '🍽️'
+}
+
 const DAYS  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
 const DAY_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
 const SLOTS = ['Breakfast','Lunch','Snacks','Dinner']
@@ -492,18 +513,13 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
     setNeedsTitle(false)
     try {
       const data = await extractRecipe(url.trim(), caption.trim())
-      if (data.thumbnail) setThumbnail(data.thumbnail)
-      if (data.title && !isJunkTitle(data.title)) {
-        setTitle(data.title)
-        setNeedsTitle(false)
-      } else {
-        setTitle('')
-        setNeedsTitle(true)
-      }
-      if (data.suggested_category_id) setCategoryId(String(data.suggested_category_id))
+      // Only use thumbnail for non-social URLs (social thumbnails show the creator's face)
+      if (data.thumbnail && !isSocialUrl(url.trim())) setThumbnail(data.thumbnail)
+      // Pre-fill title if AI found a clean one, but keep it editable
+      if (data.title && !isJunkTitle(data.title) && !title.trim()) setTitle(data.title)
       setExtracted(data)
       setActiveSection(null)
-      toast('Extracted successfully!', 'success')
+      toast('Done! Review and save.', 'success')
     } catch {
       toast('Could not extract details', 'error')
     } finally {
@@ -605,6 +621,16 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
           )}
 
 
+          {/* No data extracted — prompt to fill manually */}
+          {!extracting && extracted && ingCount === 0 && stepCount === 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--cream-2)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '10px 14px' }}>
+              <span style={{ fontSize: 18 }}>✏️</span>
+              <p style={{ fontSize: 12.5, color: 'var(--ink-2)', margin: 0, lineHeight: 1.5 }}>
+                AI couldn't extract ingredients & steps automatically. Enter the title and save — you can add details later.
+              </p>
+            </div>
+          )}
+
           {/* Extracted preview — each badge independently toggles its section */}
           {!extracting && !!(extracted && (ingCount > 0 || stepCount > 0)) && (
             <div>
@@ -673,15 +699,11 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
           )}
 
           <div>
-            <label className="section-label" style={{ display: 'block', marginBottom: 7 }}>
-              Title {needsTitle && <span style={{ color: 'var(--primary)', fontWeight: 700 }}>← Please enter the recipe name</span>}
-            </label>
+            <label className="section-label" style={{ display: 'block', marginBottom: 7 }}>Title</label>
             <input
               placeholder="e.g. Butter Chicken, Paneer Pulao…"
               value={title}
-              onChange={e => { setTitle(e.target.value); setNeedsTitle(false) }}
-              autoFocus={needsTitle}
-              style={needsTitle ? { borderColor: 'var(--primary)', boxShadow: '0 0 0 3px rgba(212,82,42,.15)' } : {}}
+              onChange={e => setTitle(e.target.value)}
             />
           </div>
 
@@ -720,11 +742,11 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
               </div>
             ) : (
               <div style={{ display: 'flex', gap: 8 }}>
-                <select value={categoryId} onChange={e => setCategoryId(e.target.value)} style={{ flex: 1 }}>
+                <select value={categoryId} onChange={e => { if (e.target.value === '__new__') { setAddingCat(true) } else { setCategoryId(e.target.value) } }} style={{ flex: 1 }}>
                   <option value="">— Select category —</option>
                   {localCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  <option value="__new__">+ Add new category…</option>
                 </select>
-                <button className="btn btn-secondary btn-sm" style={{ flexShrink: 0, borderRadius: 10 }} onClick={() => setAddingCat(true)} title="Add new category">+ New</button>
               </div>
             )}
           </div>
@@ -974,30 +996,39 @@ export default function LibraryView({ triggerAdd, onTriggerAddDone }) {
           </div>
         </div>
 
-        {/* Category filter chips */}
-        <div className="hide-scrollbar" style={{ display: 'flex', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', marginBottom: 16, alignItems: 'center', paddingBottom: 2 }}>
-          {['', ...categories.map(c => String(c.id))].map((val, i) => {
-            const label = val === '' ? 'All' : categories.find(c => String(c.id) === val)?.name
-            const a = String(filterCat) === val
+        {/* Category tiles */}
+        <div className="hide-scrollbar" style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', overflowX: 'auto', marginBottom: 16, paddingBottom: 4 }}>
+          {/* All tile */}
+          {[{ id: '', name: 'All', emoji: '🍽️' }, ...categories.map(c => ({ id: String(c.id), name: c.name, emoji: getCategoryEmoji(c.name) }))].map((cat) => {
+            const a = String(filterCat) === cat.id
             return (
-              <button key={i} onClick={() => setFilterCat(val === '' ? '' : val)} style={{
-                padding: '5px 14px', borderRadius: 99, flexShrink: 0,
-                border: `1.5px solid ${a ? 'var(--primary)' : 'var(--border)'}`,
-                background: a ? 'var(--primary-bg)' : 'var(--white)',
-                color: a ? 'var(--primary)' : 'var(--ink-2)',
-                fontSize: 12.5, fontWeight: a ? 600 : 500, cursor: 'pointer',
-                fontFamily: 'inherit', transition: 'all .15s', whiteSpace: 'nowrap',
-              }}>{label}</button>
+              <button key={cat.id} onClick={() => setFilterCat(cat.id)} style={{
+                flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                padding: '10px 14px', borderRadius: 16, border: `1.5px solid ${a ? 'var(--primary)' : 'var(--border)'}`,
+                background: a ? 'var(--primary-bg)' : 'var(--white)', cursor: 'pointer',
+                minWidth: 68, fontFamily: 'inherit', transition: 'all .15s',
+              }}>
+                <span style={{ fontSize: 22 }}>{cat.emoji}</span>
+                <span style={{ fontSize: 11, fontWeight: a ? 700 : 500, color: a ? 'var(--primary)' : 'var(--ink-2)', whiteSpace: 'nowrap' }}>{cat.name}</span>
+              </button>
             )
           })}
+          {/* Add category tile */}
           {showCatInput ? (
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <input value={newCat} onChange={e => setNewCat(e.target.value)} onKeyDown={e => e.key === 'Enter' && addCat()} placeholder="Name…" autoFocus style={{ width: 130, padding: '5px 10px', fontSize: 12, borderRadius: 8 }} />
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+              <input value={newCat} onChange={e => setNewCat(e.target.value)} onKeyDown={e => e.key === 'Enter' && addCat()} placeholder="Name…" autoFocus style={{ width: 120, padding: '5px 10px', fontSize: 12, borderRadius: 8 }} />
               <button className="btn btn-primary btn-sm" onClick={addCat} disabled={!newCat.trim()} style={{ borderRadius: 8 }}>Add</button>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowCatInput(false)}>✕</button>
             </div>
           ) : (
-            <button onClick={() => setShowCatInput(true)} style={{ padding: '5px 14px', borderRadius: 99, border: '1.5px dashed var(--border)', background: 'transparent', color: 'var(--ink-3)', fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap' }}>+ New</button>
+            <button onClick={() => setShowCatInput(true)} style={{
+              flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+              padding: '10px 14px', borderRadius: 16, border: '1.5px dashed var(--border)',
+              background: 'transparent', cursor: 'pointer', minWidth: 68, fontFamily: 'inherit',
+            }}>
+              <span style={{ fontSize: 22 }}>＋</span>
+              <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>Add</span>
+            </button>
           )}
         </div>
         {/* Separator line */}

@@ -125,7 +125,7 @@ def ai_call(prompt: str, system: str = "", max_tokens: int = 1500) -> str:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
     response = ai_client.chat.completions.create(
-        model="openai/gpt-oss-20b:free",
+        model="google/gemini-2.0-flash-lite-001",
         max_tokens=max_tokens,
         messages=messages,
     )
@@ -159,7 +159,7 @@ Rules:
 - title: actual dish name, never URL params
 - {cat_instruction}- ingredients: infer if not listed, always return at least basics, group logically
 - instructions: infer if not listed, at least 3 steps
-- nutrition: estimate per serving, always all 4 fields
+- nutrition: estimate per serving, always all 4 fields as integers (e.g. 350 not "350")
 Return ONLY valid JSON.""",
         system="Recipe extraction expert. Return valid JSON only.",
         max_tokens=1200
@@ -365,14 +365,21 @@ async def extract_recipe(url: str, caption: Optional[str] = None):
         thumbnail = social["thumbnail"] or preview["thumbnail"]
         # Use user-pasted caption if provided, else fall back to yt-dlp
         caption = (caption or social["caption"] or "").strip()
-        details = await ai_extract_recipe_details(url, "", caption, categories)
-        title = details.get("title") or ""
-        # Fallback: use first short line of caption as title if AI returned empty
-        if not title and caption:
-            first_line = caption.split('\n')[0].strip()
-            if first_line and len(first_line) < 80 and not any(c in first_line for c in ['http', '#', '@']):
-                title = first_line
-        cat_id = suggest_category_id(details.get("category", ""), categories)
+        if caption:
+            # We have real content — extract properly
+            details = await ai_extract_recipe_details(url, "", caption, categories)
+            title = details.get("title") or ""
+            # Fallback: use first short line of caption as title if AI returned empty
+            if not title:
+                first_line = caption.split('\n')[0].strip()
+                if first_line and len(first_line) < 80 and not any(c in first_line for c in ['http', '#', '@']):
+                    title = first_line
+            cat_id = suggest_category_id(details.get("category", ""), categories)
+        else:
+            # No caption — don't hallucinate. Return empty so user fills in manually.
+            details = {"ingredients": {}, "instructions": [], "nutrition": {}}
+            title = ""
+            cat_id = None
         return {
             "title": title,
             "thumbnail": thumbnail,

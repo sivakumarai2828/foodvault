@@ -60,6 +60,43 @@ function IconPlus() {
   return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 }
 
+/* ── Onboarding Intro ─────────────────────────────────────────────────────── */
+function OnboardingModal({ onDone }) {
+  const steps = [
+    { icon: '📱', title: 'Save any recipe', desc: 'Paste a link from Instagram, YouTube, or any food blog. AI pulls out ingredients, steps & nutrition instantly.' },
+    { icon: '🗂️', title: 'Browse by category', desc: 'Organise your recipes into categories like Biryani, Curries, Breakfast. Find them in seconds.' },
+    { icon: '✦',  title: 'Ask your AI chef', desc: 'Swap ingredients, scale servings, or ask what to cook tonight — your AI assistant is always ready.' },
+  ]
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div style={{ background: '#fff', borderRadius: '28px 28px 0 0', padding: '32px 24px 28px', maxWidth: 480, width: '100%', boxShadow: '0 -8px 40px rgba(0,0,0,.18)', maxHeight: '90dvh', overflowY: 'auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{ width: 60, height: 60, borderRadius: 18, background: 'linear-gradient(135deg,#f97316,#ea580c)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, margin: '0 auto 16px', boxShadow: '0 6px 20px rgba(249,115,22,.35)' }}>🍽️</div>
+          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, fontWeight: 700, color: '#1c0f00', marginBottom: 6 }}>Welcome to FoodVault</h2>
+          <p style={{ fontSize: 13.5, color: '#78350f', lineHeight: 1.6 }}>Your personal recipe collection, powered by AI.</p>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
+          {steps.map(s => (
+            <div key={s.title} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: 16, padding: '12px 14px' }}>
+              <span style={{ fontSize: 22, flexShrink: 0 }}>{s.icon}</span>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#1c0f00', marginBottom: 2 }}>{s.title}</p>
+                <p style={{ fontSize: 12, color: '#92400e', lineHeight: 1.5 }}>{s.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={onDone}
+          style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg,#f97316,#ea580c)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(249,115,22,.4)' }}
+        >
+          Get Started →
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /* ── App ──────────────────────────────────────────────────────────────────── */
 export default function App() {
   const [tab, setTab] = useState('home')
@@ -67,6 +104,7 @@ export default function App() {
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showIntro, setShowIntro] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -74,6 +112,9 @@ export default function App() {
       setAuthLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user && !localStorage.getItem('fv_intro_seen')) {
+        setShowIntro(true)
+      }
       setUser(session?.user ?? null)
     })
     return () => subscription.unsubscribe()
@@ -108,6 +149,7 @@ export default function App() {
 
   return (
     <ToastProvider>
+      {showIntro && <OnboardingModal onDone={() => { localStorage.setItem('fv_intro_seen', '1'); setShowIntro(false) }} />}
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', background: 'var(--cream)' }}>
 
         {/* ── Top Header ── */}
