@@ -580,19 +580,27 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
           {/* Extraction loader */}
           {extracting && <ExtractionLoader />}
 
-          {/* Caption paste — optional, only for social links */}
+          {/* Caption paste — only for social links */}
           {!extracting && isSocialUrl(url) && (
             <div>
-              <label className="section-label" style={{ display: 'block', marginBottom: 5 }}>
-                Caption <span style={{ color: 'var(--ink-3)', fontWeight: 400, fontSize: 11 }}>(optional — paste for better accuracy)</span>
+              <label className="section-label" style={{ display: 'block', marginBottom: 6 }}>
+                Paste Caption
+                <span style={{ color: 'var(--ink-3)', fontWeight: 400, fontSize: 11, marginLeft: 6 }}>for ingredients & steps</span>
               </label>
+              {/* How-to steps */}
+              <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+                {['1. Open Instagram post', '2. Tap ···', '3. Copy', '4. Paste here'].map((s, i) => (
+                  <span key={i} style={{ fontSize: 11, background: i === 3 ? 'var(--primary-bg)' : 'var(--cream-2)', color: i === 3 ? 'var(--primary)' : 'var(--ink-3)', borderRadius: 6, padding: '3px 8px', fontWeight: 500, border: `1px solid ${i === 3 ? 'var(--primary)' : 'var(--border)'}` }}>{s}</span>
+                ))}
+              </div>
               <textarea
-                placeholder="Paste post caption here for more accurate ingredients & steps…"
+                placeholder="Paste the caption text here…"
                 value={caption}
                 onChange={e => setCaption(e.target.value)}
                 rows={2}
-                style={{ width: '100%', resize: 'vertical', fontSize: 12.5, borderRadius: 10, border: '1.5px solid var(--border)', padding: '8px 12px', fontFamily: 'inherit', background: 'var(--cream)' }}
+                style={{ width: '100%', resize: 'vertical', fontSize: 12.5, borderRadius: 10, border: `1.5px solid ${caption ? '#16a34a' : 'var(--border)'}`, padding: '8px 12px', fontFamily: 'inherit', background: caption ? '#f0fdf4' : 'var(--cream)' }}
               />
+              {caption && <p style={{ fontSize: 11, color: '#16a34a', marginTop: 4 }}>✓ Caption added — click Extract again for full details</p>}
             </div>
           )}
 
