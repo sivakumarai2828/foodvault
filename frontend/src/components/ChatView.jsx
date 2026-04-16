@@ -206,6 +206,10 @@ export default function ChatView() {
         </button>
       </div>
 
+      <p style={{ fontSize: 10.5, color: 'var(--ink-3)', textAlign: 'center', marginTop: 6 }}>
+        AI can make mistakes. Please double-check responses.
+      </p>
+
       <style>{`
         @keyframes dot { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-5px);opacity:1} }
         .hide-scrollbar { scrollbar-width:none; -ms-overflow-style:none; }

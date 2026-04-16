@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { getRecipes, getCategories, createRecipe, updateRecipe, deleteRecipe,
-         extractRecipe, reExtractRecipe, aiCategorize, createCategory, imageProxyUrl,
+         extractRecipe, reExtractRecipe, aiCategorize, createCategory, deleteCategory, imageProxyUrl,
          setMealPlanEntry, addRecipeToShopping } from '../lib/api'
 import { useToast } from '../App'
 import CookingMode from './CookingMode'
@@ -385,98 +385,26 @@ function RecipeDetailModal({ recipe: initialRecipe, onClose, onUpdated }) {
 
 // ─── Extraction Loader ────────────────────────────────────────────────────────
 
-const EXTRACT_STEPS = [
-  { icon: '🔗', text: 'Fetching the recipe link…' },
-  { icon: '🍳', text: 'Reading the ingredients…' },
-  { icon: '📋', text: 'Extracting cooking steps…' },
-  { icon: '🔥', text: 'Calculating nutrition…' },
-  { icon: '✨', text: 'Almost ready…' },
-]
-
 function ExtractionLoader() {
-  const [step, setStep] = useState(0)
-  const [progress, setProgress] = useState(0)
-
-  useEffect(() => {
-    // Progress bar fills over ~10s
-    const progressInterval = setInterval(() => {
-      setProgress(p => Math.min(p + 1, 92))
-    }, 100)
-
-    // Rotate messages every 2s
-    const stepInterval = setInterval(() => {
-      setStep(s => (s + 1) % EXTRACT_STEPS.length)
-    }, 2000)
-
-    return () => { clearInterval(progressInterval); clearInterval(stepInterval) }
-  }, [])
-
-  const current = EXTRACT_STEPS[step]
-
   return (
     <div style={{
-      borderRadius: 16,
-      background: 'linear-gradient(135deg, #fff8f5 0%, #fff4ee 100%)',
-      border: '1.5px solid #ffe0d0',
-      padding: '20px 18px',
-      textAlign: 'center',
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '12px 14px', borderRadius: 14,
+      background: 'var(--cream)', border: '1.5px solid var(--border)',
     }}>
-      {/* Animated icon */}
       <div style={{
-        fontSize: 36,
-        marginBottom: 10,
-        display: 'inline-block',
-        animation: 'extractBounce 0.6s ease',
-      }}>
-        {current.icon}
+        width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+        background: 'linear-gradient(135deg, #f97316, #c2410c)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 20,
+      }}>👨‍🍳</div>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="spinner" style={{ width: 14, height: 14, flexShrink: 0 }} />
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>AI Extracting…</span>
+        </div>
+        <p style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 2 }}>Usually takes 8–12 seconds</p>
       </div>
-
-      {/* Rotating message */}
-      <p style={{
-        fontSize: 14,
-        fontWeight: 600,
-        color: 'var(--ink)',
-        marginBottom: 4,
-        minHeight: 22,
-        transition: 'opacity 0.3s',
-      }}>
-        {current.text}
-      </p>
-      <p style={{ fontSize: 11.5, color: 'var(--ink-3)', marginBottom: 14 }}>
-        Powered by AI — usually takes 8–12 seconds
-      </p>
-
-      {/* Progress bar */}
-      <div style={{ background: '#f0e8e0', borderRadius: 99, height: 6, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%',
-          width: `${progress}%`,
-          borderRadius: 99,
-          background: 'linear-gradient(90deg, var(--primary), #f97316)',
-          transition: 'width 0.1s linear',
-        }} />
-      </div>
-
-      {/* Step dots */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
-        {EXTRACT_STEPS.map((s, i) => (
-          <div key={i} style={{
-            width: i === step ? 18 : 6,
-            height: 6,
-            borderRadius: 99,
-            background: i === step ? 'var(--primary)' : '#e0d4cc',
-            transition: 'all 0.3s ease',
-          }} />
-        ))}
-      </div>
-
-      <style>{`
-        @keyframes extractBounce {
-          0%   { transform: scale(0.7) rotate(-10deg); opacity: 0; }
-          60%  { transform: scale(1.15) rotate(5deg); opacity: 1; }
-          100% { transform: scale(1) rotate(0deg); }
-        }
-      `}</style>
     </div>
   )
 }
@@ -499,13 +427,12 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
   const [activeSection, setActiveSection] = useState(null) // 'ingredients' | 'steps' | 'nutrition'
   const [newCatInput, setNewCatInput] = useState('')
   const [addingCat, setAddingCat] = useState(false)
+  const [catOpen, setCatOpen] = useState(false)
   const [localCategories, setLocalCategories] = useState(categories || [])
 
-  // Self-fetch categories if none were passed (e.g. modal opened before library finished loading)
+  // Always fetch fresh categories when modal opens
   useEffect(() => {
-    if (!categories?.length) {
-      getCategories().then(cats => setLocalCategories(cats)).catch(() => {})
-    }
+    getCategories().then(cats => setLocalCategories(cats)).catch(() => {})
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const isJunkTitle = (t) => {
@@ -527,8 +454,6 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
       const data = await extractRecipe(url.trim(), caption.trim())
       // Only use thumbnail for non-social URLs (social thumbnails show the creator's face)
       if (data.thumbnail && !isSocialUrl(url.trim())) setThumbnail(data.thumbnail)
-      // Pre-fill title if AI found a clean one, but keep it editable
-      if (data.title && !isJunkTitle(data.title) && !title.trim()) setTitle(data.title)
       setExtracted(data)
       setActiveSection(null)
       toast('Done! Review and save.', 'success')
@@ -738,15 +663,68 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
                 <button className="btn btn-ghost btn-sm" onClick={() => { setAddingCat(false); setNewCatInput('') }}>✕</button>
               </div>
             ) : (
-              <button
-                className="btn btn-secondary"
-                style={{ width: '100%', borderRadius: 12, justifyContent: 'center' }}
-                onClick={() => setAddingCat(true)}
-              >
-                {categoryId
-                  ? `✓ ${localCategories.find(c => String(c.id) === categoryId)?.name || 'Category selected'}`
-                  : '+ Add Category'}
-              </button>
+              <div style={{ position: 'relative' }}>
+                {/* Trigger button */}
+                <button
+                  type="button"
+                  onClick={() => setCatOpen(o => !o)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '9px 12px', border: '1.5px solid var(--border)', borderRadius: catOpen ? '12px 12px 0 0' : 12,
+                    background: 'var(--white)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13,
+                    color: categoryId ? 'var(--ink)' : 'var(--ink-3)',
+                  }}
+                >
+                  <span>
+                    {categoryId
+                      ? (localCategories.find(c => String(c.id) === categoryId)?.name || 'Unknown')
+                      : '— Select category —'}
+                  </span>
+                  <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{catOpen ? '▲' : '▼'}</span>
+                </button>
+
+                {/* Dropdown list */}
+                {catOpen && (
+                  <div style={{
+                    border: '1.5px solid var(--border)', borderTop: 'none',
+                    borderRadius: '0 0 12px 12px', background: 'var(--white)',
+                    maxHeight: 200, overflowY: 'auto', position: 'absolute',
+                    top: '100%', left: 0, right: 0, zIndex: 50,
+                    boxShadow: '0 6px 20px rgba(0,0,0,.08)',
+                  }}>
+                    {/* "None" option */}
+                    <div onClick={() => { setCategoryId(''); setCatOpen(false) }} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', cursor: 'pointer', background: !categoryId ? 'var(--primary-bg)' : 'transparent', borderBottom: '1px solid var(--border)' }}>
+                      <span style={{ flex: 1, fontSize: 13, color: !categoryId ? 'var(--primary)' : 'var(--ink-3)', fontWeight: !categoryId ? 600 : 400 }}>
+                        {!categoryId ? '✓ None' : 'None'}
+                      </span>
+                    </div>
+                    {localCategories.map(c => (
+                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', cursor: 'pointer', background: String(c.id) === categoryId ? 'var(--primary-bg)' : 'transparent', borderBottom: '1px solid var(--border)' }}>
+                        <span onClick={() => { setCategoryId(String(c.id)); setCatOpen(false) }} style={{ flex: 1, fontSize: 13, color: String(c.id) === categoryId ? 'var(--primary)' : 'var(--ink)', fontWeight: String(c.id) === categoryId ? 600 : 400 }}>
+                          {String(c.id) === categoryId ? '✓ ' : ''}{c.name}
+                        </span>
+                        <button onClick={async e => {
+                          e.stopPropagation()
+                          if (!window.confirm(`Delete category "${c.name}"?`)) return
+                          try {
+                            await deleteCategory(c.id)
+                            setLocalCategories(p => p.filter(x => x.id !== c.id))
+                            if (categoryId === String(c.id)) setCategoryId('')
+                            toast('Category deleted', 'info')
+                          } catch { toast('Cannot delete — recipes assigned to it', 'error') }
+                        }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', fontSize: 13, padding: '2px 4px', borderRadius: 4, lineHeight: 1 }}
+                          onMouseEnter={e => e.currentTarget.style.color = '#dc2626'}
+                          onMouseLeave={e => e.currentTarget.style.color = 'var(--ink-3)'}
+                        >✕</button>
+                      </div>
+                    ))}
+                    {/* Add new */}
+                    <div onClick={() => { setAddingCat(true); setCatOpen(false) }} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', cursor: 'pointer', color: 'var(--primary)', fontSize: 13, fontWeight: 600 }}>
+                      + New category
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -756,6 +734,9 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
               {saving ? <><span className="spinner" /> Saving…</> : 'Save Recipe'}
             </button>
           </div>
+          <p style={{ fontSize: 10.5, color: 'var(--ink-3)', textAlign: 'center', marginTop: 2 }}>
+            AI can make mistakes. Please double-check responses.
+          </p>
         </div>
       </div>
     </div>
@@ -1001,12 +982,24 @@ export default function LibraryView({ triggerAdd, onTriggerAddDone }) {
           {[{ id: '', name: 'All', emoji: '🍽️' }, ...categories.map(c => ({ id: String(c.id), name: c.name, emoji: getCategoryEmoji(c.name) }))].map((cat) => {
             const a = String(filterCat) === cat.id
             return (
-              <button key={cat.id} onClick={() => setFilterCat(cat.id)} style={{
-                flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                padding: '10px 14px', borderRadius: 16, border: `1.5px solid ${a ? 'var(--primary)' : 'var(--border)'}`,
-                background: a ? 'var(--primary-bg)' : 'var(--white)', cursor: 'pointer',
-                minWidth: 68, fontFamily: 'inherit', transition: 'all .15s',
-              }}>
+              <button key={cat.id} onClick={() => setFilterCat(cat.id)}
+                onDragOver={cat.id ? e => e.preventDefault() : undefined}
+                onDrop={cat.id ? async e => {
+                  e.preventDefault()
+                  const recipeId = e.dataTransfer.getData('recipeId')
+                  if (!recipeId) return
+                  try {
+                    await updateRecipe(Number(recipeId), { category_id: Number(cat.id) })
+                    setRecipes(p => p.map(r => String(r.id) === recipeId ? { ...r, category_id: Number(cat.id), category_name: cat.name } : r))
+                    toast(`Moved to ${cat.name}`, 'success')
+                  } catch { toast('Failed to move', 'error') }
+                } : undefined}
+                style={{
+                  flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                  padding: '10px 14px', borderRadius: 16, border: `1.5px solid ${a ? 'var(--primary)' : 'var(--border)'}`,
+                  background: a ? 'var(--primary-bg)' : 'var(--white)', cursor: 'pointer',
+                  minWidth: 68, fontFamily: 'inherit', transition: 'all .15s',
+                }}>
                 <span style={{ fontSize: 22 }}>{cat.emoji}</span>
                 <span style={{ fontSize: 11, fontWeight: a ? 700 : 500, color: a ? 'var(--primary)' : 'var(--ink-2)', whiteSpace: 'nowrap' }}>{cat.name}</span>
               </button>
@@ -1069,19 +1062,23 @@ export default function LibraryView({ triggerAdd, onTriggerAddDone }) {
       ) : viewMode === 'grid' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 16, paddingTop: 8 }}>
           {recipes.map(r => (
-            <RecipeCard key={r.id} recipe={r} categories={categories} viewMode="grid"
-              onDelete={id => setRecipes(p => p.filter(x => x.id !== id))}
-              onUpdated={u => setRecipes(p => p.map(x => x.id === u.id ? u : x))}
-            />
+            <div key={r.id} draggable onDragStart={e => e.dataTransfer.setData('recipeId', String(r.id))} style={{ cursor: 'grab' }}>
+              <RecipeCard recipe={r} categories={categories} viewMode="grid"
+                onDelete={id => setRecipes(p => p.filter(x => x.id !== id))}
+                onUpdated={u => setRecipes(p => p.map(x => x.id === u.id ? u : x))}
+              />
+            </div>
           ))}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7, paddingTop: 8 }}>
           {recipes.map(r => (
-            <RecipeCard key={r.id} recipe={r} categories={categories} viewMode="list"
-              onDelete={id => setRecipes(p => p.filter(x => x.id !== id))}
-              onUpdated={u => setRecipes(p => p.map(x => x.id === u.id ? u : x))}
-            />
+            <div key={r.id} draggable onDragStart={e => e.dataTransfer.setData('recipeId', String(r.id))} style={{ cursor: 'grab' }}>
+              <RecipeCard recipe={r} categories={categories} viewMode="list"
+                onDelete={id => setRecipes(p => p.filter(x => x.id !== id))}
+                onUpdated={u => setRecipes(p => p.map(x => x.id === u.id ? u : x))}
+              />
+            </div>
           ))}
         </div>
       )}
