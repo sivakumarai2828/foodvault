@@ -4,8 +4,8 @@ import { getTodayMenu } from '../lib/api'
 const SLOTS = ['Breakfast', 'Lunch', 'Snacks', 'Dinner']
 const SLOT_CFG = {
   Breakfast: { emoji: '🌅', bg: '#FBF5E6', border: '#E8D499', label: '#C49A3C' },
-  Lunch:     { emoji: '☀️',  bg: '#EEF4EE', border: '#C0D4BF', label: '#5C7A5A' },
-  Snacks:    { emoji: '🍎', bg: '#FDF3EE', border: '#F0C4B0', label: '#D4522A' },
+  Lunch:     { emoji: '☀️',  bg: '#FAF8F0', border: '#D0C8B0', label: '#4A6030' },
+  Snacks:    { emoji: '🍎', bg: '#FAF8F0', border: '#E0D8C8', label: '#82B83C' },
   Dinner:    { emoji: '🌙', bg: '#F4F0FA', border: '#D4C4F0', label: '#7C52B8' },
 }
 

@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from openai import OpenAI
+import anthropic
 from supabase import create_client, Client
 
 load_dotenv()
@@ -28,6 +29,12 @@ ai_client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=OPENROUTER_API_KEY,
 ) if OPENROUTER_API_KEY else None
+
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
+
+# Claude Haiku 4.5 — fast, cheap, used for chat + meal plan with prompt caching
+CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -89,7 +96,7 @@ async def fetch_social_caption(url: str) -> dict:
             None,
             lambda: subprocess.run(
                 ['yt-dlp', '--dump-json', '--no-download', '--quiet', url],
-                capture_output=True, text=True, timeout=30
+                capture_output=True, text=True, timeout=15
             )
         )
         if result.returncode == 0 and result.stdout.strip():
@@ -105,19 +112,24 @@ async def fetch_page_text(url: str) -> str:
     """Try to fetch raw page text for richer AI extraction."""
     try:
         headers = {"User-Agent": "Mozilla/5.0 (compatible; FoodVaultBot/1.0)"}
-        async with httpx.AsyncClient(timeout=12, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=8, follow_redirects=True) as client:
             resp = await client.get(url, headers=headers)
             text = resp.text
-            # Strip HTML tags
             text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.DOTALL)
             text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
             text = re.sub(r'<[^>]+>', ' ', text)
             text = re.sub(r'\s+', ' ', text).strip()
-            return text[:6000]  # Keep first 6000 chars
+            return text[:3000]  # Recipe content is always in first 3k chars
     except Exception:
         return ""
 
-def ai_call(prompt: str, system: str = "", max_tokens: int = 1500) -> str:
+MODELS = {
+    "extract": "google/gemini-2.5-flash",              # paid — quality critical for JSON extraction
+    "free":    "google/gemini-2.0-flash-exp:free",     # free — fast, same family, chat/shopping/plan
+    "nano":    "qwen/qwen3-8b:free",                   # free — ultra-fast, simple tasks (categorize)
+}
+
+def ai_call(prompt: str, system: str = "", max_tokens: int = 1500, tier: str = "free") -> str:
     if not ai_client:
         return "{}"
     messages = []
@@ -125,11 +137,61 @@ def ai_call(prompt: str, system: str = "", max_tokens: int = 1500) -> str:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
     response = ai_client.chat.completions.create(
-        model="google/gemini-2.0-flash-lite-001",
+        model=MODELS[tier],
         max_tokens=max_tokens,
         messages=messages,
     )
     return response.choices[0].message.content.strip()
+
+def claude_chat(user_message: str, recipe_list: str) -> str:
+    """Chat using Claude Haiku with prompt caching on the recipe list.
+    Cache hit saves ~90% tokens on the recipe list portion (5-min TTL).
+    Falls back to OpenRouter if no Anthropic key."""
+    if not claude_client:
+        return ai_call(
+            user_message,
+            system=f"You are FoodVault's cooking assistant. Be friendly, concise, helpful.\n\nUser's saved recipes:\n{recipe_list}",
+        )
+    response = claude_client.messages.create(
+        model=CLAUDE_MODEL,
+        max_tokens=1024,
+        system=[
+            {"type": "text", "text": "You are FoodVault's cooking assistant. Be friendly, concise, and helpful.\n\nUser's saved recipes:\n"},
+            {"type": "text", "text": recipe_list or "(no recipes saved yet)", "cache_control": {"type": "ephemeral"}},
+        ],
+        messages=[{"role": "user", "content": user_message}],
+    )
+    return response.content[0].text
+
+
+def claude_suggest_plan(recipe_list: str) -> str:
+    """Meal plan using Claude Haiku with prompt caching on the recipe list.
+    Falls back to OpenRouter if no Anthropic key."""
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    plan_instruction = (
+        f'Create a balanced weekly meal plan assigning recipe IDs.\n'
+        f'Return JSON: {{"Monday":{{"Breakfast":<id>,"Lunch":<id>,"Snacks":<id>,"Dinner":<id>}},...}}\n'
+        f'Include all 7 days: {", ".join(days)}'
+    )
+    if not claude_client:
+        return ai_call(
+            f"Recipes:\n{recipe_list}\n\n{plan_instruction}",
+            system="Meal planning assistant. Return valid JSON only.",
+        )
+    response = claude_client.messages.create(
+        model=CLAUDE_MODEL,
+        max_tokens=1024,
+        system=[{"type": "text", "text": "Meal planning assistant. Return valid JSON only."}],
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": f"Recipes:\n{recipe_list}", "cache_control": {"type": "ephemeral"}},
+                {"type": "text", "text": f"\n\n{plan_instruction}"},
+            ],
+        }],
+    )
+    return response.content[0].text
+
 
 def extract_json(text: str):
     match = re.search(r'(\{.*\}|\[.*\])', text, re.DOTALL)
@@ -137,12 +199,10 @@ def extract_json(text: str):
         return json.loads(match.group())
     return json.loads(text)
 
-async def ai_extract_recipe_details(url: str, title: str, description: str, categories: list = None) -> dict:
+async def ai_extract_recipe_details(url: str, title: str, description: str, categories: list = None, page_text: str = None) -> dict:
     """Extract title, ingredients (grouped), instructions, nutrition, and category from recipe page."""
-    if is_social_url(url):
-        page_text = ""
-    else:
-        page_text = await fetch_page_text(url)
+    if page_text is None:
+        page_text = "" if is_social_url(url) else await fetch_page_text(url)
     content = f"URL: {url}\nTitle: {title}\nDescription: {description}\nPage content: {page_text}" if page_text else f"URL: {url}\nTitle: {title}\nDescription: {description}"
     cat_list = ", ".join(c["name"] for c in categories) if categories else ""
     cat_instruction = f'- "category": Pick the single best match from: {cat_list}. Return exact name.\n' if cat_list else ""
@@ -162,7 +222,8 @@ Rules:
 - nutrition: estimate per serving, always all 4 fields as integers (e.g. 350 not "350")
 Return ONLY valid JSON.""",
         system="Recipe extraction expert. Return valid JSON only.",
-        max_tokens=1200
+        max_tokens=1200,
+        tier="extract"
     )
     try:
         data = extract_json(result)
@@ -295,7 +356,8 @@ Rules:
 - Estimate nutrition per serving if not provided
 - Return ONLY valid JSON, no explanation""",
         system="You are a recipe data extraction expert. Always return valid JSON only.",
-        max_tokens=2000
+        max_tokens=1200,
+        tier="extract"
     )
     try:
         parsed = extract_json(result)
@@ -394,8 +456,11 @@ async def extract_recipe(url: str, caption: Optional[str] = None):
             "suggested_category_id": cat_id,
         }
 
-    preview = await fetch_link_preview(url)
-    details = await ai_extract_recipe_details(url, preview["title"], preview["description"], categories)
+    preview, page_text = await asyncio.gather(
+        fetch_link_preview(url),
+        fetch_page_text(url),
+    )
+    details = await ai_extract_recipe_details(url, preview["title"], preview["description"], categories, page_text=page_text)
     final_title = details.get("title") or preview["title"]
     if is_junk_title(preview["title"]) and details.get("title"):
         final_title = details["title"]
@@ -505,7 +570,8 @@ def ai_categorize(recipe_id: int):
         f"Recipe title: {r['title']}\nDescription: {r.get('description') or 'N/A'}\n"
         f"Available categories: {', '.join(cat_names)}\n"
         f"Which single category best fits? Reply with just the category name.",
-        system="You are a food categorization assistant."
+        system="You are a food categorization assistant.",
+        tier="nano"
     )
     matched = next((c for c in categories if c["name"].lower() == result.lower().strip()), None)
     if matched:
@@ -548,14 +614,7 @@ def ai_suggest_plan(user_id: str = Depends(get_user_id)):
         f"- ID:{r['id']} | {r['title']} | Category:{r.get('categories', {}).get('name', 'Uncategorized') if r.get('categories') else 'Uncategorized'}"
         for r in recipes
     ])
-    days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
-    result = ai_call(
-        f"Recipes:\n{recipe_list}\n\n"
-        f"Create a balanced weekly meal plan assigning recipe IDs.\n"
-        f'Return JSON: {{"Monday":{{"Breakfast":<id>,"Lunch":<id>,"Snacks":<id>,"Dinner":<id>}},...}}\n'
-        f"Include all 7 days: {', '.join(days)}",
-        system="Meal planning assistant. Return valid JSON only."
-    )
+    result = claude_suggest_plan(recipe_list)
     try:
         plan_data = extract_json(result)
     except Exception:
@@ -582,16 +641,9 @@ def ai_chat(msg: ChatMessage, user_id: str = Depends(get_user_id)):
     recipes = supabase.table("recipes").select("*, categories(name)").eq("user_id", user_id).execute().data
     recipe_list = "\n".join([
         f"- {r['title']} | {r.get('categories',{}).get('name','Uncategorized') if r.get('categories') else 'Uncategorized'}"
-        for r in recipes
+        for r in recipes[:40]
     ])
-    result = ai_call(
-        msg.message,
-        system=(
-            "You are FoodVault's cooking assistant. "
-            f"User's saved recipes:\n{recipe_list}\n\n"
-            "Be friendly, concise, and helpful."
-        )
-    )
+    result = claude_chat(msg.message, recipe_list)
     return {"reply": result}
 
 # ─── Meal Planner ─────────────────────────────────────────────────────────────
@@ -637,24 +689,21 @@ def generate_shopping_list(week_start: Optional[str] = None, user_id: str = Depe
     if not entries:
         raise HTTPException(status_code=400, detail="No meal plan for this week")
     recipe_ids = list({e["recipe_id"] for e in entries})
-    recipes = [sb_one(supabase.table("recipes").select("title, description, ingredients").eq("id", rid).eq("user_id", user_id)) for rid in recipe_ids]
+    recipes = [sb_one(supabase.table("recipes").select("title, ingredients").eq("id", rid).eq("user_id", user_id)) for rid in recipe_ids]
     recipes = [r for r in recipes if r]
-    recipe_info = "\n".join([f"- {r['title']}: {r.get('description') or 'No description'}" for r in recipes])
-    result = ai_call(
-        f"Cooking this week:\n{recipe_info}\n\n"
-        f'Return combined shopping list as JSON: {{"Vegetables":["2 onions"],"Proteins":["500g chicken"],"Dairy":["1 cup yogurt"],"Spices":["1 tsp cumin"],"Grains":["2 cups rice"],"Others":["olive oil"]}}',
-        system="Shopping list generator. Return valid JSON only."
-    )
-    try:
-        grouped = extract_json(result)
-    except Exception:
-        raise HTTPException(status_code=500, detail=f"AI returned invalid JSON: {result}")
     supabase.table("shopping_items").delete().eq("week_start", ws).eq("user_id", user_id).execute()
     items = []
-    for group, ingredient_list in grouped.items():
-        for item_name in ingredient_list:
-            supabase.table("shopping_items").insert({"week_start": ws, "name": item_name, "grp": group, "checked": False, "recipe_title": None, "user_id": user_id}).execute()
-            items.append({"name": item_name, "group": group})
+    for recipe in recipes:
+        ingredients = recipe.get("ingredients") or {}
+        recipe_title = recipe["title"]
+        for group_name, ing_list in (ingredients.items() if isinstance(ingredients, dict) else [("Ingredients", ingredients)]):
+            grp = _classify_ingredient_group(group_name, ing_list)
+            for item in (ing_list or []):
+                supabase.table("shopping_items").insert({
+                    "week_start": ws, "name": str(item), "grp": grp,
+                    "checked": False, "recipe_title": recipe_title, "user_id": user_id,
+                }).execute()
+                items.append({"name": item, "group": grp})
     return {"generated": len(items), "items": items}
 
 @app.patch("/api/shopping/{item_id}/toggle")

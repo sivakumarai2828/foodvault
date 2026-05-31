@@ -4,27 +4,27 @@
 
 :root {
   /* Warm, food-forward palette */
-  --cream:       #FAF8F3;
-  --cream-2:     #F3EFE7;
-  --cream-3:     #EDE8DE;
+  --cream:       #EDE8D2;
+  --cream-2:     #E4DDCA;
+  --cream-3:     #D8D0B8;
   --white:       #FFFFFF;
-  --border:      #E8E2D9;
-  --border-2:    #D9D1C5;
+  --border:      #CEC6B0;
+  --border-2:    #C0B89A;
 
   /* Text */
-  --ink:         #1C1610;
-  --ink-2:       #5C5044;
-  --ink-3:       #9C8E80;
+  --ink:         #2C3A18;
+  --ink-2:       #4A6030;
+  --ink-3:       #7A9060;
 
   /* Primary — warm terracotta */
-  --primary:     #D4522A;
-  --primary-2:   #C04520;
-  --primary-bg:  #FDF3EE;
-  --primary-light: #F8C4B0;
+  --primary:     #82B83C;
+  --primary-2:   #5C8A1E;
+  --primary-bg:  #F5EFDF;
+  --primary-light: #E0D8C8;
 
   /* Accent — sage green */
-  --sage:        #5C7A5A;
-  --sage-bg:     #EEF4EE;
+  --sage:        #4A6030;
+  --sage-bg:     #F5EFDF;
 
   /* Gold */
   --gold:        #C49A3C;
@@ -33,17 +33,18 @@
   /* Layout */
   --radius:      16px;
   --radius-sm:   10px;
-  --shadow-sm:   0 1px 3px rgba(100,80,60,.08), 0 1px 2px rgba(100,80,60,.06);
-  --shadow:      0 4px 16px rgba(100,80,60,.1), 0 1px 4px rgba(100,80,60,.06);
-  --shadow-md:   0 8px 32px rgba(100,80,60,.12), 0 2px 8px rgba(100,80,60,.08);
-  --shadow-lg:   0 16px 48px rgba(100,80,60,.14), 0 4px 16px rgba(100,80,60,.08);
+  --shadow-sm:   0 1px 3px rgba(44,58,24,.08), 0 1px 2px rgba(44,58,24,.06);
+  --shadow:      0 4px 16px rgba(44,58,24,.1), 0 1px 4px rgba(44,58,24,.06);
+  --shadow-md:   0 8px 32px rgba(44,58,24,.12), 0 2px 8px rgba(44,58,24,.08);
+  --shadow-lg:   0 16px 48px rgba(44,58,24,.14), 0 4px 16px rgba(44,58,24,.08);
 }
 
 html, body, #root { height: 100%; }
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background: var(--cream);
+  background-color: var(--cream);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
   color: var(--ink);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
@@ -67,9 +68,9 @@ body {
 }
 .btn-primary {
   background: var(--primary); color: #fff;
-  box-shadow: 0 4px 14px rgba(212,82,42,.30);
+  box-shadow: 0 4px 14px rgba(130,184,60,.30);
 }
-.btn-primary:hover { background: var(--primary-2); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(212,82,42,.36); }
+.btn-primary:hover { background: var(--primary-2); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(130,184,60,.36); }
 .btn-primary:active { transform: translateY(0); }
 .btn-secondary {
   background: var(--white); color: var(--ink);
@@ -81,7 +82,7 @@ body {
 .btn-ghost:hover { background: var(--cream-2); color: var(--ink); }
 .btn-danger { background: #FFF0ED; color: #C0392B; border: 1.5px solid #FAC8BF; }
 .btn-danger:hover { background: #FDDDD7; }
-.btn-sage { background: var(--sage); color: #fff; box-shadow: 0 4px 14px rgba(92,122,90,.25); }
+.btn-sage { background: var(--sage); color: #fff; box-shadow: 0 4px 14px rgba(74,96,48,.25); }
 .btn-sage:hover { background: #4E6B4C; transform: translateY(-1px); }
 .btn-sm { padding: 6px 16px; font-size: 12.5px; }
 .btn-icon { padding: 8px; border-radius: 10px; }
@@ -96,7 +97,7 @@ input, textarea, select {
 }
 input:focus, textarea:focus, select:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(212,82,42,.12);
+  box-shadow: 0 0 0 3px rgba(130,184,60,.12);
 }
 input::placeholder, textarea::placeholder { color: var(--ink-3); }
 select option { background: var(--white); color: var(--ink); }
@@ -122,7 +123,7 @@ select option { background: var(--white); color: var(--ink); }
   letter-spacing: 0.03em;
 }
 .badge-red    { background: var(--primary-bg); color: var(--primary); border: 1px solid var(--primary-light); }
-.badge-green  { background: var(--sage-bg); color: var(--sage); border: 1px solid #C0D4BF; }
+.badge-green  { background: var(--sage-bg); color: var(--sage); border: 1px solid #D0C8B0; }
 .badge-gold   { background: var(--gold-bg); color: var(--gold); border: 1px solid #E8D499; }
 .badge-gray   { background: var(--cream-2); color: var(--ink-2); border: 1px solid var(--border); }
 
@@ -163,7 +164,7 @@ select option { background: var(--white); color: var(--ink); }
   box-shadow: var(--shadow-md); animation: toastIn .22s ease; max-width: 300px;
   border: 1.5px solid; background: var(--white);
 }
-.toast-success { color: #1A6331; border-color: #B6E2C8; background: #F0FBF4; }
+.toast-success { color: #4A6030; border-color: #B6E2C8; background: #F0FBF4; }
 .toast-error   { color: #C0392B; border-color: #FAC8BF; background: #FFF3F1; }
 .toast-info    { color: #2B4EA0; border-color: #C0CEFA; background: #F0F4FF; }
 @keyframes toastIn { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -171,7 +172,7 @@ select option { background: var(--white); color: var(--ink); }
 /* ── Modal ── */
 .modal-overlay {
   position: fixed; inset: 0;
-  background: rgba(30,22,10,.5);
+  background: rgba(44,58,24,.5);
   backdrop-filter: blur(4px);
   display: flex; align-items: flex-end; justify-content: center;
   z-index: 1000; animation: fadeIn .2s ease;
@@ -240,14 +241,14 @@ select option { background: var(--white); color: var(--ink); }
   background: var(--primary);
   color: #fff;
   border: none;
-  box-shadow: 0 6px 24px rgba(212,82,42,.42), 0 2px 8px rgba(212,82,42,.22);
+  box-shadow: 0 6px 24px rgba(130,184,60,.42), 0 2px 8px rgba(130,184,60,.22);
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   z-index: 99;
   transition: transform .15s, box-shadow .15s;
 }
-.fab:hover  { transform: scale(1.07); box-shadow: 0 8px 28px rgba(212,82,42,.50); }
-.fab:active { transform: scale(0.94); box-shadow: 0 2px 10px rgba(212,82,42,.30); }
+.fab:hover  { transform: scale(1.07); box-shadow: 0 8px 28px rgba(130,184,60,.50); }
+.fab:active { transform: scale(0.94); box-shadow: 0 2px 10px rgba(130,184,60,.30); }
 
 /* ── Card active press ── */
 .card-hover:active { transform: translateY(-1px) scale(0.99); }

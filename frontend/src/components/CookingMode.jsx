@@ -29,7 +29,7 @@ export default function CookingMode({ recipe, onClose }) {
     return (
       <div style={{
         position: 'fixed', inset: 0, zIndex: 2000,
-        background: '#1C1610', display: 'flex', flexDirection: 'column',
+        background: '#2C3A18', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', padding: 32,
       }}>
         <div style={{ textAlign: 'center', color: '#fff' }}>
@@ -56,7 +56,7 @@ export default function CookingMode({ recipe, onClose }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 2000,
-      background: '#1C1610',
+      background: '#2C3A18',
       display: 'flex', flexDirection: 'column',
     }}>
       {/* Header bar */}
@@ -123,7 +123,7 @@ export default function CookingMode({ recipe, onClose }) {
               width: 56, height: 56, borderRadius: '50%', background: 'var(--primary)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 22, fontWeight: 800, color: '#fff', margin: '0 auto 24px',
-              boxShadow: '0 6px 24px rgba(212,82,42,.4)',
+              boxShadow: '0 6px 24px rgba(130,184,60,.4)',
             }}>{step + 1}</div>
 
             {/* Step text */}
@@ -176,11 +176,11 @@ export default function CookingMode({ recipe, onClose }) {
               background: 'var(--primary)', color: '#fff',
               fontSize: 15, fontWeight: 700, cursor: 'pointer',
               fontFamily: 'inherit',
-              boxShadow: '0 4px 20px rgba(212,82,42,.45)',
+              boxShadow: '0 4px 20px rgba(130,184,60,.45)',
               transition: 'all .15s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(212,82,42,.55)' }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(212,82,42,.45)' }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(130,184,60,.55)' }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(130,184,60,.45)' }}
           >
             {step === steps.length - 1 ? 'Finish Cooking 🎉' : 'Next Step →'}
           </button>

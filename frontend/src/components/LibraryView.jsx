@@ -348,8 +348,8 @@ function RecipeDetailModal({ recipe: initialRecipe, onClose, onUpdated }) {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, flex: 1 }}>
                       {[
                         { label: 'Protein', value: nutrition.protein, unit: 'g', color: '#E84C8B' },
-                        { label: 'Carbs',   value: nutrition.carbs,   unit: 'g', color: '#F4B942' },
-                        { label: 'Fat',     value: nutrition.fat,     unit: 'g', color: '#5C7A5A' },
+                        { label: 'Carbs',   value: nutrition.carbs,   unit: 'g', color: '#C49A3C' },
+                        { label: 'Fat',     value: nutrition.fat,     unit: 'g', color: '#4A6030' },
                         { label: 'Calories',value: nutrition.calories,unit: 'kcal', color: 'var(--primary)' },
                       ].map(n => (
                         <div key={n.label} style={{ background: 'var(--cream)', borderRadius: 12, padding: '10px 14px', border: '1px solid var(--border)' }}>
@@ -394,7 +394,7 @@ function ExtractionLoader() {
     }}>
       <div style={{
         width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-        background: 'linear-gradient(135deg, #f97316, #c2410c)',
+        background: 'linear-gradient(135deg, #82B83C, #82B83C)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 20,
       }}>👨‍🍳</div>
@@ -606,8 +606,8 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
                     {[
                       { label: 'Calories', value: extracted.nutrition.calories, unit: 'kcal', color: 'var(--primary)' },
                       { label: 'Protein',  value: extracted.nutrition.protein,  unit: 'g',    color: '#E84C8B' },
-                      { label: 'Carbs',    value: extracted.nutrition.carbs,    unit: 'g',    color: '#F4B942' },
-                      { label: 'Fat',      value: extracted.nutrition.fat,      unit: 'g',    color: '#5C7A5A' },
+                      { label: 'Carbs',    value: extracted.nutrition.carbs,    unit: 'g',    color: '#C49A3C' },
+                      { label: 'Fat',      value: extracted.nutrition.fat,      unit: 'g',    color: '#4A6030' },
                     ].map(n => (
                       <div key={n.label} style={{ background: '#fff', borderRadius: 8, padding: '6px 10px', border: '1px solid var(--border)' }}>
                         <p style={{ fontSize: 10, color: 'var(--ink-3)', marginBottom: 1 }}>{n.label}</p>
@@ -713,7 +713,7 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
                             toast('Category deleted', 'info')
                           } catch { toast('Cannot delete — recipes assigned to it', 'error') }
                         }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', fontSize: 13, padding: '2px 4px', borderRadius: 4, lineHeight: 1 }}
-                          onMouseEnter={e => e.currentTarget.style.color = '#dc2626'}
+                          onMouseEnter={e => e.currentTarget.style.color = '#C0392B'}
                           onMouseLeave={e => e.currentTarget.style.color = 'var(--ink-3)'}
                         >✕</button>
                       </div>
@@ -797,7 +797,7 @@ function RecipeCard({ recipe, categories, onDelete, onUpdated, viewMode = 'grid'
               {recipe.category_name && <span className="tag" style={{ fontSize: 10 }}>{recipe.category_name}</span>}
               {ingCount > 0 && <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>🥄 {ingCount}</span>}
               {recipe.nutrition?.calories && <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>🔥 {recipe.nutrition.calories} kcal</span>}
-              {recipe.cooked && <span style={{ fontSize: 11, color: '#2E9E5B', fontWeight: 600 }}>✓ Cooked</span>}
+              {recipe.cooked && <span style={{ fontSize: 11, color: '#82B83C', fontWeight: 600 }}>✓ Cooked</span>}
             </div>
           </div>
           {/* Actions */}
@@ -829,7 +829,7 @@ function RecipeCard({ recipe, categories, onDelete, onUpdated, viewMode = 'grid'
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,.4),transparent 50%)' }} />
           {recipe.cooked && (
             <div style={{ position: 'absolute', top: 8, left: 8 }}>
-              <span style={{ background: '#2E9E5B', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99 }}>✓ Cooked</span>
+              <span style={{ background: '#82B83C', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99 }}>✓ Cooked</span>
             </div>
           )}
           {recipe.category_name && (

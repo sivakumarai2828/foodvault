@@ -5,10 +5,10 @@ import { signInWithGoogle } from '../lib/supabase'
 const APP_URL = typeof window !== 'undefined' ? window.location.origin : 'https://foodvault-app.web.app'
 
 const FEATURES = [
-  { icon: '📱', bg: '#fff7ed', border: '#fed7aa', title: 'Save from anywhere', desc: 'Paste any link — Instagram, YouTube, blogs — and AI extracts the full recipe.' },
-  { icon: '🗂️', bg: '#f0fdf4', border: '#bbf7d0', title: 'Organise your way',  desc: 'Browse recipes by category. Filter, search, and find what you want in seconds.' },
-  { icon: '🍽️', bg: '#fff1f2', border: '#fecdd3', title: 'Cook with confidence', desc: 'Step-by-step instructions, ingredients, and nutrition — all in one place.' },
-  { icon: '✦',  bg: '#faf5ff', border: '#ddd6fe', title: 'AI cooking assistant', desc: 'Ask anything — substitutions, scaling, what to cook with what you have.' },
+  { icon: '📱', bg: '#F5EFDF', border: '#E0D8C8', title: 'Save from anywhere', desc: 'Paste any link — Instagram, YouTube, blogs — and AI extracts the full recipe.' },
+  { icon: '🗂️', bg: '#F5EFDF', border: '#E0D8C8', title: 'Organise your way',  desc: 'Browse recipes by category. Filter, search, and find what you want in seconds.' },
+  { icon: '🍽️', bg: '#FBF5E6', border: '#E8D499', title: 'Cook with confidence', desc: 'Step-by-step instructions, ingredients, and nutrition — all in one place.' },
+  { icon: '✦',  bg: '#F4F0FA', border: '#D4C4F0', title: 'AI cooking assistant', desc: 'Ask anything — substitutions, scaling, what to cook with what you have.' },
 ]
 
 function GoogleIcon() {
@@ -26,27 +26,27 @@ function LoginCard({ loading, error, btnHover, setBtnHover, onLogin }) {
   return (
     <div style={{
       background: '#fff', borderRadius: 28,
-      border: '1.5px solid rgba(249,115,22,.15)',
-      boxShadow: '0 20px 60px rgba(249,115,22,.12), 0 4px 16px rgba(0,0,0,.06)',
+      border: '1.5px solid rgba(180,160,100,.12)',
+      boxShadow: '0 20px 60px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04)',
       padding: '40px 36px',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
     }}>
       <div style={{
         width: 52, height: 52, borderRadius: 16,
-        background: 'linear-gradient(135deg, #fff7ed, #ffedd5)',
-        border: '1.5px solid #fed7aa',
+        background: 'linear-gradient(135deg, #F5EFDF, #F5EFDF)',
+        border: '1.5px solid #E0D8C8',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 24, marginBottom: 18,
       }}>👋</div>
 
       <h2 style={{
         fontFamily: "'Playfair Display', serif",
-        fontSize: 21, fontWeight: 700, color: '#1c0f00',
+        fontSize: 21, fontWeight: 700, color: '#2C3A18',
         marginBottom: 6, textAlign: 'center',
       }}>Welcome to FoodVault</h2>
 
       <p style={{
-        fontSize: 13.5, color: '#92400e', textAlign: 'center',
+        fontSize: 13.5, color: '#4A6030', textAlign: 'center',
         lineHeight: 1.6, marginBottom: 28, maxWidth: 240,
       }}>
         Sign in to access your recipes and meal plans.
@@ -62,7 +62,7 @@ function LoginCard({ loading, error, btnHover, setBtnHover, onLogin }) {
           border: '1.5px solid #e5e7eb', background: '#fff',
           cursor: loading ? 'not-allowed' : 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-          fontFamily: 'inherit', fontSize: 15, fontWeight: 600, color: '#1c0f00',
+          fontFamily: 'inherit', fontSize: 15, fontWeight: 600, color: '#2C3A18',
           transition: 'all .2s',
           transform: btnHover && !loading ? 'translateY(-2px) scale(1.01)' : 'none',
           boxShadow: btnHover && !loading ? '0 8px 24px rgba(0,0,0,.12)' : '0 2px 8px rgba(0,0,0,.06)',
@@ -70,20 +70,20 @@ function LoginCard({ loading, error, btnHover, setBtnHover, onLogin }) {
         }}
       >
         {loading
-          ? <span className="spinner" style={{ width: 20, height: 20, borderTopColor: '#f97316' }} />
+          ? <span className="spinner" style={{ width: 20, height: 20, borderTopColor: '#82B83C' }} />
           : <GoogleIcon />
         }
         {loading ? 'Signing in…' : 'Continue with Google'}
       </button>
 
-      {error && <p style={{ marginTop: 12, fontSize: 13, color: '#dc2626', textAlign: 'center' }}>{error}</p>}
+      {error && <p style={{ marginTop: 12, fontSize: 13, color: '#C0392B', textAlign: 'center' }}>{error}</p>}
 
       <div style={{
         marginTop: 20, padding: '11px 16px',
-        background: '#f0fdf4', borderRadius: 12,
-        border: '1px solid #bbf7d0', width: '100%',
+        background: '#F5EFDF', borderRadius: 12,
+        border: '1px solid #E0D8C8', width: '100%',
       }}>
-        <p style={{ fontSize: 12, color: '#16a34a', textAlign: 'center', lineHeight: 1.6, margin: 0, fontWeight: 500 }}>
+        <p style={{ fontSize: 12, color: '#5C8A1E', textAlign: 'center', lineHeight: 1.6, margin: 0, fontWeight: 500 }}>
           🔒 Secure sign-in via Google. We never store your password.
         </p>
       </div>
@@ -110,7 +110,7 @@ export default function LoginView() {
       ═══════════════════════════════════════════ */}
       <div className="desktop-login" style={{
         minHeight: '100dvh',
-        background: 'linear-gradient(135deg, #fff6f0 0%, #ffe8d6 50%, #fffaf5 100%)',
+        background: 'linear-gradient(135deg, #EDE8D2 0%, #F5EFDF 50%, #F5EFDF 100%)',
         display: 'flex', alignItems: 'stretch',
       }}>
         {/* Left */}
@@ -122,23 +122,23 @@ export default function LoginView() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 44 }}>
             <div style={{
               width: 48, height: 48, borderRadius: 15,
-              background: 'linear-gradient(135deg, #f97316, #ea580c)',
+              background: 'linear-gradient(135deg, #82B83C, #5C8A1E)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 23, boxShadow: '0 6px 20px rgba(249,115,22,.35)',
+              fontSize: 23, boxShadow: '0 6px 20px rgba(130,184,60,.35)',
             }}>🍽️</div>
-            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: '#1c0f00' }}>FoodVault</span>
+            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: '#2C3A18' }}>FoodVault</span>
           </div>
 
           <h1 style={{
             fontFamily: "'Playfair Display', serif",
             fontSize: 'clamp(28px, 3vw, 44px)', fontWeight: 700,
-            lineHeight: 1.2, color: '#1c0f00', marginBottom: 16,
+            lineHeight: 1.2, color: '#2C3A18', marginBottom: 16,
           }}>
             Plan meals.<br />Save recipes.<br />
-            <span style={{ color: '#f97316' }}>Eat better.</span>
+            <span style={{ color: '#82B83C' }}>Eat better.</span>
           </h1>
 
-          <p style={{ fontSize: 15.5, color: '#78350f', lineHeight: 1.7, marginBottom: 44, maxWidth: 380 }}>
+          <p style={{ fontSize: 15.5, color: '#4A6030', lineHeight: 1.7, marginBottom: 44, maxWidth: 380 }}>
             Save recipes from anywhere, plan your week, and let AI handle your shopping — all in one beautiful place.
           </p>
 
@@ -157,8 +157,8 @@ export default function LoginView() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 17, marginBottom: 10, boxShadow: '0 2px 8px rgba(0,0,0,.07)',
                 }}>{f.icon}</div>
-                <p style={{ fontSize: 12.5, fontWeight: 700, color: '#1c0f00', marginBottom: 4 }}>{f.title}</p>
-                <p style={{ fontSize: 11.5, color: '#92400e', lineHeight: 1.5 }}>{f.desc}</p>
+                <p style={{ fontSize: 12.5, fontWeight: 700, color: '#2C3A18', marginBottom: 4 }}>{f.title}</p>
+                <p style={{ fontSize: 11.5, color: '#4A6030', lineHeight: 1.5 }}>{f.desc}</p>
               </div>
             ))}
           </div>
@@ -166,8 +166,8 @@ export default function LoginView() {
           <div style={{ marginTop: 40, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
-              fontSize: 11.5, fontWeight: 600, color: '#c2410c',
-              background: 'rgba(249,115,22,.1)', border: '1.5px solid rgba(249,115,22,.25)',
+              fontSize: 11.5, fontWeight: 600, color: '#82B83C',
+              background: 'rgba(200,185,140,.08)', border: '1.5px solid rgba(180,150,60,.25)',
               borderRadius: 20, padding: '5px 14px',
             }}>✦ Powered by SKorbits</span>
           </div>
@@ -187,21 +187,21 @@ export default function LoginView() {
             {/* QR Code — below the login card */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: 16,
-              background: '#fff', border: '1.5px solid #fed7aa',
+              background: '#fff', border: '1.5px solid #E0D8C8',
               borderRadius: 20, padding: '14px 18px',
-              boxShadow: '0 4px 16px rgba(249,115,22,.08)',
+              boxShadow: '0 4px 16px rgba(0,0,0,.04)',
             }}>
               <div style={{
                 background: '#fff', padding: 6, borderRadius: 10,
-                border: '1.5px solid #fed7aa', flexShrink: 0,
+                border: '1.5px solid #E0D8C8', flexShrink: 0,
               }}>
-                <QRCodeSVG value={APP_URL} size={70} fgColor="#1c0f00" bgColor="#ffffff" level="M" />
+                <QRCodeSVG value={APP_URL} size={70} fgColor="#2C3A18" bgColor="#ffffff" level="M" />
               </div>
               <div>
-                <p style={{ fontSize: 12.5, fontWeight: 700, color: '#1c0f00', marginBottom: 3 }}>
+                <p style={{ fontSize: 12.5, fontWeight: 700, color: '#2C3A18', marginBottom: 3 }}>
                   Get the app on your phone
                 </p>
-                <p style={{ fontSize: 11, color: '#92400e', lineHeight: 1.55, marginBottom: 7 }}>
+                <p style={{ fontSize: 11, color: '#4A6030', lineHeight: 1.55, marginBottom: 7 }}>
                   Scan to open on iOS or Android
                 </p>
                 <div style={{ display: 'flex', gap: 5 }}>
@@ -219,14 +219,14 @@ export default function LoginView() {
       ═══════════════════════════════════════════ */}
       <div className="mobile-login" style={{
         minHeight: '100dvh',
-        background: 'linear-gradient(180deg, #fff6f0 0%, #fffaf5 100%)',
+        background: 'linear-gradient(180deg, #EDE8D2 0%, #F5EFDF 100%)',
         display: 'none', flexDirection: 'column',
         padding: '0 0 40px',
       }}>
 
         {/* Top hero band */}
         <div style={{
-          background: 'linear-gradient(135deg, #fff7ed, #ffe8d6)',
+          background: 'linear-gradient(135deg, #F5EFDF, #F5EFDF)',
           borderBottomLeftRadius: 32, borderBottomRightRadius: 32,
           padding: '48px 24px 36px',
           marginBottom: 24,
@@ -234,22 +234,22 @@ export default function LoginView() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
             <div style={{
               width: 40, height: 40, borderRadius: 12,
-              background: 'linear-gradient(135deg, #f97316, #ea580c)',
+              background: 'linear-gradient(135deg, #82B83C, #5C8A1E)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 20, flexShrink: 0,
-              boxShadow: '0 4px 14px rgba(249,115,22,.4)',
+              boxShadow: '0 4px 14px rgba(130,184,60,.4)',
             }}>🍽️</div>
-            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: '#1c0f00' }}>FoodVault</span>
+            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: '#2C3A18' }}>FoodVault</span>
           </div>
           <h1 style={{
             fontFamily: "'Playfair Display', serif",
-            fontSize: 28, fontWeight: 700, color: '#1c0f00',
+            fontSize: 28, fontWeight: 700, color: '#2C3A18',
             lineHeight: 1.25, marginBottom: 10, textAlign: 'center',
           }}>
             Plan meals.<br />Save recipes.<br />
-            <span style={{ color: '#f97316' }}>Eat better.</span>
+            <span style={{ color: '#82B83C' }}>Eat better.</span>
           </h1>
-          <p style={{ fontSize: 14, color: '#78350f', lineHeight: 1.65, maxWidth: 300, margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ fontSize: 14, color: '#4A6030', lineHeight: 1.65, maxWidth: 300, margin: '0 auto', textAlign: 'center' }}>
             Save recipes from anywhere, plan your week, and let AI handle your shopping.
           </p>
         </div>
@@ -262,7 +262,7 @@ export default function LoginView() {
         {/* Feature tiles */}
         <div style={{ padding: '0 20px' }}>
           <p style={{
-            fontSize: 11.5, fontWeight: 700, color: '#92400e',
+            fontSize: 11.5, fontWeight: 700, color: '#4A6030',
             textTransform: 'uppercase', letterSpacing: '0.08em',
             marginBottom: 14, textAlign: 'center',
           }}>Everything you need</p>
@@ -280,8 +280,8 @@ export default function LoginView() {
                   boxShadow: '0 2px 8px rgba(0,0,0,.07)',
                 }}>{f.icon}</div>
                 <div>
-                  <p style={{ fontSize: 13.5, fontWeight: 700, color: '#1c0f00', marginBottom: 3 }}>{f.title}</p>
-                  <p style={{ fontSize: 12.5, color: '#92400e', lineHeight: 1.55 }}>{f.desc}</p>
+                  <p style={{ fontSize: 13.5, fontWeight: 700, color: '#2C3A18', marginBottom: 3 }}>{f.title}</p>
+                  <p style={{ fontSize: 12.5, color: '#4A6030', lineHeight: 1.55 }}>{f.desc}</p>
                 </div>
               </div>
             ))}
@@ -290,8 +290,8 @@ export default function LoginView() {
           <div style={{ marginTop: 24, textAlign: 'center' }}>
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
-              fontSize: 11.5, fontWeight: 600, color: '#c2410c',
-              background: 'rgba(249,115,22,.1)', border: '1.5px solid rgba(249,115,22,.25)',
+              fontSize: 11.5, fontWeight: 600, color: '#82B83C',
+              background: 'rgba(200,185,140,.08)', border: '1.5px solid rgba(180,150,60,.25)',
               borderRadius: 20, padding: '5px 14px',
             }}>✦ Powered by SKorbits</span>
           </div>

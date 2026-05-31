@@ -71,24 +71,24 @@ function OnboardingModal({ onDone }) {
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div style={{ background: '#fff', borderRadius: '28px 28px 0 0', padding: '32px 24px 28px', maxWidth: 480, width: '100%', boxShadow: '0 -8px 40px rgba(0,0,0,.18)', maxHeight: '90dvh', overflowY: 'auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ width: 60, height: 60, borderRadius: 18, background: 'linear-gradient(135deg,#f97316,#ea580c)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, margin: '0 auto 16px', boxShadow: '0 6px 20px rgba(249,115,22,.35)' }}>🍽️</div>
-          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, fontWeight: 700, color: '#1c0f00', marginBottom: 6 }}>Welcome to FoodVault</h2>
-          <p style={{ fontSize: 13.5, color: '#78350f', lineHeight: 1.6 }}>Your personal recipe collection, powered by AI.</p>
+          <div style={{ width: 60, height: 60, borderRadius: 18, background: 'linear-gradient(135deg,#82B83C,#5C8A1E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, margin: '0 auto 16px', boxShadow: '0 6px 20px rgba(130,184,60,.35)' }}>🍽️</div>
+          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, fontWeight: 700, color: '#2C3A18', marginBottom: 6 }}>Welcome to FoodVault</h2>
+          <p style={{ fontSize: 13.5, color: '#4A6030', lineHeight: 1.6 }}>Your personal recipe collection, powered by AI.</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
           {steps.map(s => (
-            <div key={s.title} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: 16, padding: '12px 14px' }}>
+            <div key={s.title} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, background: '#F5EFDF', border: '1.5px solid #E0D8C8', borderRadius: 16, padding: '12px 14px' }}>
               <span style={{ fontSize: 22, flexShrink: 0 }}>{s.icon}</span>
               <div>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#1c0f00', marginBottom: 2 }}>{s.title}</p>
-                <p style={{ fontSize: 12, color: '#92400e', lineHeight: 1.5 }}>{s.desc}</p>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#2C3A18', marginBottom: 2 }}>{s.title}</p>
+                <p style={{ fontSize: 12, color: '#4A6030', lineHeight: 1.5 }}>{s.desc}</p>
               </div>
             </div>
           ))}
         </div>
         <button
           onClick={onDone}
-          style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg,#f97316,#ea580c)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(249,115,22,.4)' }}
+          style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg,#82B83C,#5C8A1E)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(130,184,60,.4)' }}
         >
           Get Started →
         </button>
@@ -154,7 +154,7 @@ export default function App() {
 
         {/* ── Top Header ── */}
         <header style={{
-          background: 'rgba(250,248,243,0.94)',
+          background: 'rgba(245,247,242,0.94)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
           borderBottom: '1px solid var(--border)',
@@ -166,7 +166,7 @@ export default function App() {
               <div style={{
                 width: 34, height: 34, borderRadius: 10, background: 'var(--primary)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 17, boxShadow: '0 3px 10px rgba(212,82,42,.3)',
+                fontSize: 17, boxShadow: '0 3px 10px rgba(130,184,60,.3)',
               }}>🍽️</div>
               <span style={{ fontFamily: "'Playfair Display',serif", fontWeight: 700, fontSize: 19, color: 'var(--ink)', letterSpacing: '-0.01em' }}>
                 FoodVault
@@ -265,7 +265,7 @@ export default function App() {
         {/* ── Bottom nav (mobile only) ── */}
         <nav style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
-          background: 'rgba(250,248,243,0.97)',
+          background: 'rgba(245,247,242,0.97)',
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
           borderTop: '1px solid var(--border)',
           display: 'flex',

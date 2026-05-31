@@ -34,7 +34,7 @@ function Message({ msg, onFollowUp, isLast }) {
           <div style={{
             width: 34, height: 34, borderRadius: 10, flexShrink: 0,
             background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 17, boxShadow: '0 4px 12px rgba(212,82,42,.25)',
+            fontSize: 17, boxShadow: '0 4px 12px rgba(130,184,60,.25)',
           }}>✦</div>
         )}
         <div style={{
@@ -44,7 +44,7 @@ function Message({ msg, onFollowUp, isLast }) {
           color: isUser ? '#fff' : 'var(--ink)',
           border: isUser ? 'none' : '1.5px solid var(--border)',
           fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap',
-          boxShadow: isUser ? '0 4px 14px rgba(212,82,42,.25)' : 'var(--shadow-sm)',
+          boxShadow: isUser ? '0 4px 14px rgba(130,184,60,.25)' : 'var(--shadow-sm)',
         }}>
           {msg.content}
         </div>
@@ -83,7 +83,7 @@ function Typing() {
       <div style={{
         width: 34, height: 34, borderRadius: 10, flexShrink: 0,
         background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 17, boxShadow: '0 4px 12px rgba(212,82,42,.25)',
+        fontSize: 17, boxShadow: '0 4px 12px rgba(130,184,60,.25)',
       }}>✦</div>
       <div style={{
         padding: '13px 18px', borderRadius: '18px 18px 18px 4px',

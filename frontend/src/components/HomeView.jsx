@@ -5,7 +5,7 @@ import { useToast } from '../App'
 
 const SLOT_CFG = {
   Breakfast: { emoji: '🌅', bg: '#FBF5E6', border: '#E8D499', label: '#C49A3C' },
-  Lunch:     { emoji: '☀️',  bg: '#EEF4EE', border: '#C0D4BF', label: '#5C7A5A' },
+  Lunch:     { emoji: '☀️',  bg: '#FAF6EE', border: '#D0C8B0', label: '#4A6030' },
   Dinner:    { emoji: '🌙', bg: '#F4F0FA', border: '#D4C4F0', label: '#7C52B8' },
 }
 
@@ -158,7 +158,7 @@ function RecentCard({ recipe, onClick }) {
             <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>🔥 {recipe.nutrition.calories}</span>
           )}
           {recipe.cooked && (
-            <span style={{ fontSize: 10, color: '#2E9E5B', fontWeight: 600 }}>✓ Cooked</span>
+            <span style={{ fontSize: 10, color: '#82B83C', fontWeight: 600 }}>✓ Cooked</span>
           )}
         </div>
       </div>
@@ -276,7 +276,7 @@ export default function HomeView({ onNavigate, onAddRecipe }) {
               display: 'flex', flexDirection: 'column', alignItems: 'center',
               justifyContent: 'center', padding: '28px 16px', gap: 12,
             }}>
-              <div style={{ width: 48, height: 48, borderRadius: 15, background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 4px 14px rgba(212,82,42,.3)' }}>✦</div>
+              <div style={{ width: 48, height: 48, borderRadius: 15, background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 4px 14px rgba(130,184,60,.3)' }}>✦</div>
               <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', textAlign: 'center', lineHeight: 1.4 }}>
                 Nothing planned yet
               </p>
@@ -295,13 +295,13 @@ export default function HomeView({ onNavigate, onAddRecipe }) {
           <QuickAction
             icon="➕" label="Add Recipe"
             desc="Save from any link"
-            color="#D4522A" tint="#FFF4F0"
+            color="#82B83C" tint="#FAF6EE"
             onClick={onAddRecipe}
           />
           <QuickAction
             icon="✦" label="Ask AI"
             desc="Get cooking help"
-            color="#7C52B8" tint="#F8F4FF"
+            color="#7C52B8" tint="#F4F0FA"
             onClick={() => onNavigate('chat')}
           />
         </div>
@@ -318,7 +318,7 @@ export default function HomeView({ onNavigate, onAddRecipe }) {
           />
           <StatCard
             icon="📚" value={recipes.length}
-            label="Recipes saved" color="#5C7A5A"
+            label="Recipes saved" color="#4A6030"
             onClick={() => onNavigate('library')}
           />
           <StatCard

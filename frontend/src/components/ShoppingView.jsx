@@ -3,12 +3,12 @@ import { getShoppingList, generateShoppingList, toggleShoppingItem, clearShoppin
 import { useToast } from '../App'
 
 const GROUP_CFG = {
-  Vegetables: { emoji: '🥦', color: '#5C7A5A', bg: '#EEF4EE', border: '#C0D4BF' },
-  Proteins:   { emoji: '🥩', color: '#B85C2A', bg: '#FDF3EE', border: '#F0C4A8' },
+  Vegetables: { emoji: '🥦', color: '#4A6030', bg: '#FAF6EE', border: '#D0C8B0' },
+  Proteins:   { emoji: '🥩', color: '#C07840', bg: '#FAF6EE', border: '#DEB898' },
   Dairy:      { emoji: '🧀', color: '#C49A3C', bg: '#FBF5E6', border: '#E8D499' },
   Spices:     { emoji: '🌶️', color: '#B83C3C', bg: '#FDF0F0', border: '#F0C0C0' },
   Grains:     { emoji: '🌾', color: '#7A6A50', bg: '#F8F4EE', border: '#DDD4C4' },
-  Others:     { emoji: '🛒', color: '#5C5044', bg: 'var(--cream-2)', border: 'var(--border)' },
+  Others:     { emoji: '🛒', color: '#4A6030', bg: 'var(--cream-2)', border: 'var(--border)' },
 }
 
 export default function ShoppingView() {
@@ -78,7 +78,7 @@ export default function ShoppingView() {
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap',
           marginBottom: 16, padding: '10px 14px',
-          background: 'rgba(212,82,42,.05)', border: '1.5px solid rgba(212,82,42,.15)',
+          background: 'rgba(180,160,100,.05)', border: '1.5px solid rgba(180,160,100,.12)',
           borderRadius: 14,
         }}>
           <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', flexShrink: 0, paddingTop: 2 }}>
@@ -89,7 +89,7 @@ export default function ShoppingView() {
               <span key={title} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
                 fontSize: 12, fontWeight: 600, color: 'var(--primary)',
-                background: 'rgba(212,82,42,.1)', border: '1.5px solid rgba(212,82,42,.2)',
+                background: 'rgba(200,185,140,.08)', border: '1.5px solid rgba(180,160,100,.15)',
                 borderRadius: 20, padding: '3px 10px',
               }}>
                 📖 {title}
@@ -101,7 +101,7 @@ export default function ShoppingView() {
 
       {/* Progress card */}
       {total > 0 && (
-        <div className="card" style={{ padding: '18px 20px', marginBottom: 24, borderRadius: 18, background: pct === 100 ? '#f0fdf4' : 'var(--white)', border: pct === 100 ? '1.5px solid #bbf7d0' : '1.5px solid var(--border)' }}>
+        <div className="card" style={{ padding: '18px 20px', marginBottom: 24, borderRadius: 18, background: pct === 100 ? '#FAF6EE' : 'var(--white)', border: pct === 100 ? '1.5px solid #E0D8C8' : '1.5px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div>
               <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 2 }}>
@@ -111,11 +111,11 @@ export default function ShoppingView() {
             </div>
             <span style={{
               fontSize: 20, fontWeight: 800,
-              color: pct === 100 ? '#1A6331' : 'var(--primary)',
+              color: pct === 100 ? '#5C8A1E' : 'var(--primary)',
             }}>{pct}%</span>
           </div>
           <div className="progress-track" style={{ height: 9, borderRadius: 99 }}>
-            <div className="progress-fill" style={{ width: `${pct}%`, background: pct === 100 ? 'linear-gradient(90deg,#2E9E5B,#4ade80)' : 'linear-gradient(90deg,var(--primary),#f97316)', transition: 'width .4s cubic-bezier(.4,0,.2,1)' }} />
+            <div className="progress-fill" style={{ width: `${pct}%`, background: pct === 100 ? 'linear-gradient(90deg,#82B83C,#4ade80)' : 'linear-gradient(90deg,var(--primary),#82B83C)', transition: 'width .4s cubic-bezier(.4,0,.2,1)' }} />
           </div>
         </div>
       )}
@@ -143,7 +143,7 @@ export default function ShoppingView() {
                 <div style={{ padding: '11px 16px', borderBottom: `1px solid ${cfg.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>{cfg.emoji}</div>
                   <span style={{ fontWeight: 700, fontSize: 14, color: cfg.color, flex: 1 }}>{group}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: done === gItems.length ? '#1A6331' : 'var(--ink-3)' }}>{done}/{gItems.length}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: done === gItems.length ? '#5C8A1E' : 'var(--ink-3)' }}>{done}/{gItems.length}</span>
                 </div>
                 <div style={{ padding: '4px 8px 8px', display: 'flex', flexDirection: 'column' }}>
                   {gItems.map((item, idx) => (
@@ -156,8 +156,8 @@ export default function ShoppingView() {
                       }}>
                         <div style={{
                           width: 24, height: 24, borderRadius: 7, flexShrink: 0,
-                          border: `2px solid ${item.checked ? '#2E9E5B' : 'var(--border-2)'}`,
-                          background: item.checked ? '#2E9E5B' : 'var(--white)',
+                          border: `2px solid ${item.checked ? '#82B83C' : 'var(--border-2)'}`,
+                          background: item.checked ? '#82B83C' : 'var(--white)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           transition: 'all .2s cubic-bezier(.4,0,.2,1)',
                           transform: item.checked ? 'scale(1.1)' : 'scale(1)',

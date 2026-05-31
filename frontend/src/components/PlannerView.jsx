@@ -8,8 +8,8 @@ const DAY_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
 const SLOTS = ['Breakfast','Lunch','Snacks','Dinner']
 const SLOT_CFG = {
   Breakfast: { emoji: '🌅', color: '#C49A3C', bg: '#FBF5E6' },
-  Lunch:     { emoji: '☀️',  color: '#5C7A5A', bg: '#EEF4EE' },
-  Snacks:    { emoji: '🍎', color: '#D4522A', bg: '#FDF3EE' },
+  Lunch:     { emoji: '☀️',  color: '#4A6030', bg: '#FAF8F0' },
+  Snacks:    { emoji: '🍎', color: '#82B83C', bg: '#FAF8F0' },
   Dinner:    { emoji: '🌙', color: '#7C52B8', bg: '#F4F0FA' },
 }
 
@@ -124,7 +124,7 @@ function CalendarCell({ entry, onOpen, onRemove, isToday }) {
       {/* Hover action overlay */}
       {hov && (
         <div style={{
-          position: 'absolute', inset: 0, background: 'rgba(28,22,16,.72)',
+          position: 'absolute', inset: 0, background: 'rgba(44,58,24,.72)',
           display: 'flex', flexDirection: 'column', gap: 5,
           alignItems: 'center', justifyContent: 'center', padding: 8,
         }}>
@@ -310,7 +310,7 @@ export default function PlannerView() {
                       padding: 6,
                       borderBottom: isLastSlot ? 'none' : '1px solid var(--border)',
                       borderRight: isLastDay ? 'none' : '1px solid var(--border)',
-                      background: isToday ? 'rgba(212,82,42,.025)' : 'transparent',
+                      background: isToday ? 'rgba(130,184,60,.025)' : 'transparent',
                     }}>
                       <CalendarCell
                         entry={entry}
