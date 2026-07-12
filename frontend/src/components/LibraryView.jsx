@@ -511,7 +511,7 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
           <div>
             <label className="section-label" style={{ display: 'block', marginBottom: 7 }}>Recipe Link</label>
             <div style={{ display: 'flex', gap: 8 }}>
-              <input placeholder="Paste any link — Instagram, YouTube, TikTok…" value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleExtract()} />
+              <input placeholder="Paste any link — Instagram, YouTube, TikTok…" value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleExtract()} style={{ flex: 1, minWidth: 0 }} />
               <button className="btn btn-primary" onClick={handleExtract} disabled={extracting || !url.trim()} style={{ flexShrink: 0, borderRadius: 12, minWidth: 90 }}>
                 {extracting ? '⏳' : '✦ Extract'}
               </button>
