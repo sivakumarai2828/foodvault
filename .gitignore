@@ -7,6 +7,9 @@ frontend/.env.production
 # Database
 backend/*.db
 
+# Logs
+backend/logs/
+
 # Python
 __pycache__/
 *.py[cod]

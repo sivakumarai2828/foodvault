@@ -2,6 +2,8 @@ import os
 import json
 import re
 import asyncio
+import logging
+from pathlib import Path
 import httpx
 from datetime import date, timedelta
 from typing import Optional
@@ -12,10 +14,24 @@ from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from openai import OpenAI
 from supabase import create_client, Client
 
+from ai_gateway import AIGateway, AI_PROFILE
+
 load_dotenv()
+
+BACKEND_DIR = Path(__file__).resolve().parent
+LOG_DIR = BACKEND_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(LOG_DIR / "foodvault-ai.log", encoding="utf-8"),
+    ],
+)
 
 # ─── Clients ──────────────────────────────────────────────────────────────────
 
@@ -23,11 +39,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-ai_client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=OPENROUTER_API_KEY,
-) if OPENROUTER_API_KEY else None
+ai_gateway = AIGateway()
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -45,7 +57,7 @@ def is_junk_title(title: str) -> bool:
 SOCIAL_DOMAINS = ("instagram.com", "tiktok.com", "facebook.com", "fb.com", "fb.watch")
 
 def is_social_url(url: str) -> bool:
-    return any(d in url for d in SOCIAL_DOMAINS)
+    return any(d in (url or "").lower() for d in SOCIAL_DOMAINS)
 
 def domain_label(url: str) -> str:
     """Return empty string for social links (user must type title), domain name for others."""
@@ -58,9 +70,9 @@ def domain_label(url: str) -> str:
     except Exception:
         return ""
 
-async def fetch_link_preview(url: str) -> dict:
+async def fetch_link_preview(url: str, timeout: int = 10) -> dict:
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with httpx.AsyncClient(timeout=timeout) as client:
             resp = await client.get("https://api.microlink.io", params={"url": url})
             data = resp.json()
             if data.get("status") == "success":
@@ -81,15 +93,20 @@ async def fetch_link_preview(url: str) -> dict:
         pass
     return {"title": "" if is_social_url(url) else domain_label(url), "thumbnail": None, "description": ""}
 
-async def fetch_social_caption(url: str) -> dict:
-    """Use yt-dlp to extract caption, thumbnail from Instagram/TikTok reels (free, no API key)."""
+async def fetch_social_caption(url: str, timeout: int = 12) -> dict:
+    """Use yt-dlp to extract caption, thumbnail from Instagram/TikTok reels (free, no API key).
+
+    Instagram frequently rate-limits/blocks yt-dlp, so we keep the timeout short to
+    avoid the request hanging. Callers should prefer a user-pasted caption when possible.
+    """
     try:
         import subprocess
         result = await asyncio.get_event_loop().run_in_executor(
             None,
             lambda: subprocess.run(
-                ['yt-dlp', '--dump-json', '--no-download', '--quiet', url],
-                capture_output=True, text=True, timeout=30
+                ['yt-dlp', '--dump-json', '--no-download', '--quiet',
+                 '--socket-timeout', str(timeout), url],
+                capture_output=True, text=True, timeout=timeout
             )
         )
         if result.returncode == 0 and result.stdout.strip():
@@ -117,19 +134,14 @@ async def fetch_page_text(url: str) -> str:
     except Exception:
         return ""
 
-def ai_call(prompt: str, system: str = "", max_tokens: int = 1500) -> str:
-    if not ai_client:
+def ai_call(prompt: str, system: str = "", max_tokens: int = 1500, model: str = AI_PROFILE["chat"]) -> str:
+    if not ai_gateway.enabled:
         return "{}"
     messages = []
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
-    response = ai_client.chat.completions.create(
-        model="google/gemini-2.0-flash-lite-001",
-        max_tokens=max_tokens,
-        messages=messages,
-    )
-    return response.choices[0].message.content.strip()
+    return ai_gateway.chat(messages=messages, model=model, max_tokens=max_tokens)
 
 def extract_json(text: str):
     match = re.search(r'(\{.*\}|\[.*\])', text, re.DOTALL)
@@ -162,7 +174,8 @@ Rules:
 - nutrition: estimate per serving, always all 4 fields as integers (e.g. 350 not "350")
 Return ONLY valid JSON.""",
         system="Recipe extraction expert. Return valid JSON only.",
-        max_tokens=1200
+        max_tokens=1200,
+        model=AI_PROFILE["recipe_extraction"]
     )
     try:
         data = extract_json(result)
@@ -212,8 +225,16 @@ app = FastAPI(title="FoodVault API", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 @app.get("/health")
-def health():
-    return {"status": "ok", "service": "FoodVault API"}
+def health(probe: bool = False):
+    result = {
+        "status": "ok",
+        "service": "FoodVault API",
+        "ai_gateway": "omniroute",
+        "ai_ready": ai_gateway.enabled,
+    }
+    if probe:
+        result["ai_reachable"] = ai_gateway.ping()
+    return result
 
 async def get_user_id(authorization: Optional[str] = Header(None)) -> str:
     if not authorization or not authorization.startswith("Bearer "):
@@ -295,7 +316,8 @@ Rules:
 - Estimate nutrition per serving if not provided
 - Return ONLY valid JSON, no explanation""",
         system="You are a recipe data extraction expert. Always return valid JSON only.",
-        max_tokens=2000
+        max_tokens=2000,
+        model=AI_PROFILE["recipe_extraction"]
     )
     try:
         parsed = extract_json(result)
@@ -361,14 +383,21 @@ async def extract_recipe(url: str, caption: Optional[str] = None):
     categories = supabase.table("categories").select("*").order("name").execute().data
 
     if is_social_url(url):
-        # Run yt-dlp and link preview in parallel
-        social, preview = await asyncio.gather(
-            fetch_social_caption(url),
-            fetch_link_preview(url)
-        )
-        thumbnail = social["thumbnail"] or preview["thumbnail"]
-        # Use user-pasted caption if provided, else fall back to yt-dlp
-        caption = (caption or social["caption"] or "").strip()
+        # Prefer user-pasted caption/text. It is much faster and more reliable than
+        # trying to scrape Instagram/TikTok, which can hang or be blocked.
+        pasted_caption = (caption or "").strip()
+        if pasted_caption:
+            social = {"caption": pasted_caption, "thumbnail": ""}
+            preview = {"thumbnail": None}
+        else:
+            # Best-effort fallback only. Keep timeout short so the UI is not stuck.
+            social, preview = await asyncio.gather(
+                fetch_social_caption(url, timeout=8),
+                fetch_link_preview(url, timeout=5)
+            )
+
+        thumbnail = social.get("thumbnail") or preview.get("thumbnail")
+        caption = (pasted_caption or social.get("caption") or "").strip()
         if caption:
             # We have real content — extract properly
             details = await ai_extract_recipe_details(url, "", caption, categories)
@@ -418,29 +447,22 @@ def list_recipes(category_id: Optional[int] = None, q: Optional[str] = None, use
 
 @app.post("/api/recipes", status_code=201)
 async def create_recipe(data: RecipeCreate, user_id: str = Depends(get_user_id)):
-    preview = await fetch_link_preview(data.url)
-    description = data.description or preview["description"]
-
     if is_social_url(data.url):
-        if data.ingredients is not None:
-            title = data.title or ""
-            details = {
-                "ingredients": data.ingredients,
-                "instructions": data.instructions or [],
-                "nutrition": data.nutrition or {},
-            }
-            yt_thumbnail = None
-        else:
-            social = await fetch_social_caption(data.url)
-            yt_thumbnail = social["thumbnail"]
-            caption = social["caption"]
-            if caption:
-                details = await ai_extract_recipe_details(data.url, "", caption)
-                title = data.title or details.get("title") or ""
-            else:
-                title = data.title or ""
-                details = {"ingredients": {}, "instructions": [], "nutrition": {}}
+        # Do not perform a second slow Instagram/TikTok scrape or Microlink preview during save.
+        # The add dialog already called /api/extract; if it found nothing, save
+        # the user's title/manual fields quickly and let them re-extract later.
+        preview = {"title": "", "thumbnail": None, "description": ""}
+        description = data.description or ""
+        title = data.title or ""
+        details = {
+            "ingredients": data.ingredients or {},
+            "instructions": data.instructions or [],
+            "nutrition": data.nutrition or {},
+        }
+        yt_thumbnail = None
     else:
+        preview = await fetch_link_preview(data.url)
+        description = data.description or preview["description"]
         yt_thumbnail = None
         # Use pre-extracted details from frontend if provided, else run AI extraction
         if data.ingredients is not None:
@@ -505,7 +527,8 @@ def ai_categorize(recipe_id: int):
         f"Recipe title: {r['title']}\nDescription: {r.get('description') or 'N/A'}\n"
         f"Available categories: {', '.join(cat_names)}\n"
         f"Which single category best fits? Reply with just the category name.",
-        system="You are a food categorization assistant."
+        system="You are a food categorization assistant.",
+        model=AI_PROFILE["recipe"]
     )
     matched = next((c for c in categories if c["name"].lower() == result.lower().strip()), None)
     if matched:
@@ -532,7 +555,8 @@ def ai_extract_ingredients(recipe_id: int):
     result = ai_call(
         f"Recipe: {r['title']}\nDescription: {r.get('description') or 'N/A'}\n"
         f"Extract ingredients list as JSON array: [\"2 cups rice\", \"1 onion\"]",
-        system="Return valid JSON only."
+        system="Return valid JSON only.",
+        model=AI_PROFILE["recipe_extraction"]
     )
     try:
         return {"ingredients": extract_json(result)}
@@ -554,7 +578,8 @@ def ai_suggest_plan(user_id: str = Depends(get_user_id)):
         f"Create a balanced weekly meal plan assigning recipe IDs.\n"
         f'Return JSON: {{"Monday":{{"Breakfast":<id>,"Lunch":<id>,"Snacks":<id>,"Dinner":<id>}},...}}\n'
         f"Include all 7 days: {', '.join(days)}",
-        system="Meal planning assistant. Return valid JSON only."
+        system="Meal planning assistant. Return valid JSON only.",
+        model=AI_PROFILE["meal_planner"]
     )
     try:
         plan_data = extract_json(result)
@@ -590,7 +615,8 @@ def ai_chat(msg: ChatMessage, user_id: str = Depends(get_user_id)):
             "You are FoodVault's cooking assistant. "
             f"User's saved recipes:\n{recipe_list}\n\n"
             "Be friendly, concise, and helpful."
-        )
+        ),
+        model=AI_PROFILE["chat"]
     )
     return {"reply": result}
 
@@ -643,7 +669,8 @@ def generate_shopping_list(week_start: Optional[str] = None, user_id: str = Depe
     result = ai_call(
         f"Cooking this week:\n{recipe_info}\n\n"
         f'Return combined shopping list as JSON: {{"Vegetables":["2 onions"],"Proteins":["500g chicken"],"Dairy":["1 cup yogurt"],"Spices":["1 tsp cumin"],"Grains":["2 cups rice"],"Others":["olive oil"]}}',
-        system="Shopping list generator. Return valid JSON only."
+        system="Shopping list generator. Return valid JSON only.",
+        model=AI_PROFILE["recipe"]
     )
     try:
         grouped = extract_json(result)

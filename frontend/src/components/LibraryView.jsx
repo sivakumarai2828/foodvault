@@ -403,7 +403,7 @@ function ExtractionLoader() {
           <span className="spinner" style={{ width: 14, height: 14, flexShrink: 0 }} />
           <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>AI Extracting…</span>
         </div>
-        <p style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 2 }}>Usually takes 8–12 seconds</p>
+        <p style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 2 }}>Usually takes 5–10 seconds</p>
       </div>
     </div>
   )
@@ -411,7 +411,7 @@ function ExtractionLoader() {
 
 // ─── Add Recipe Modal ─────────────────────────────────────────────────────────
 const SOCIAL_DOMAINS = ['instagram.com', 'tiktok.com', 'facebook.com', 'fb.com', 'fb.watch']
-const isSocialUrl = (u) => SOCIAL_DOMAINS.some(d => u.includes(d))
+const isSocialUrl = (u = '') => SOCIAL_DOMAINS.some(d => u.toLowerCase().includes(d))
 
 function AddRecipeModal({ categories, onClose, onAdded }) {
   const toast = useToast()
@@ -447,13 +447,16 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
   }
 
   const handleExtract = async () => {
-    if (!url.trim()) return
+    const cleanUrl = url.trim()
+    if (!cleanUrl) return
     setExtracting(true)
     setNeedsTitle(false)
     try {
-      const data = await extractRecipe(url.trim(), caption.trim())
-      // Only use thumbnail for non-social URLs (social thumbnails show the creator's face)
-      if (data.thumbnail && !isSocialUrl(url.trim())) setThumbnail(data.thumbnail)
+      const data = await extractRecipe(cleanUrl, caption.trim())
+      // Only use thumbnail for non-social URLs (social thumbnails often show the creator's face)
+      if (data.thumbnail && !isSocialUrl(cleanUrl)) setThumbnail(data.thumbnail)
+      if (data.title && !isJunkTitle(data.title)) setTitle(data.title)
+      if (data.suggested_category_id) setCategoryId(String(data.suggested_category_id))
       setExtracted(data)
       setActiveSection(null)
       toast('Done! Review and save.', 'success')
@@ -468,18 +471,20 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
     if (!url.trim() || !title.trim()) { toast('URL and title required', 'error'); return }
     setSaving(true)
     try {
-      // Send null for empty collections so backend re-extracts instead of storing empty data
+      // For normal recipe pages, null allows backend re-extraction if needed.
+      // For social links, send empty collections so save stays fast and never re-scrapes Instagram/TikTok.
       const hasIngredients = extracted?.ingredients && Object.keys(extracted.ingredients).length > 0
       const hasInstructions = Array.isArray(extracted?.instructions) && extracted.instructions.length > 0
       const hasNutrition = extracted?.nutrition?.calories
 
+      const social = isSocialUrl(url.trim())
       const recipe = await createRecipe({
         url: url.trim(), title: title.trim(),
         thumbnail: thumbnail || null,
         category_id: categoryId ? +categoryId : null,
-        ingredients:  hasIngredients  ? extracted.ingredients  : null,
-        instructions: hasInstructions ? extracted.instructions : null,
-        nutrition:    hasNutrition    ? extracted.nutrition    : null,
+        ingredients:  hasIngredients  ? extracted.ingredients  : (social ? {} : null),
+        instructions: hasInstructions ? extracted.instructions : (social ? [] : null),
+        nutrition:    hasNutrition    ? extracted.nutrition    : (social ? {} : null),
       })
       toast('Recipe saved!', 'success')
       onAdded(recipe); onClose()
@@ -513,6 +518,24 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
             </div>
             <p style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 5 }}>AI will auto-extract ingredients, instructions & nutrition</p>
           </div>
+
+          {/* Social caption / recipe text input */}
+          {isSocialUrl(url.trim()) && (
+            <div>
+              <label className="section-label" style={{ display: 'block', marginBottom: 7 }}>
+                Instagram/TikTok Caption or Recipe Text
+              </label>
+              <textarea
+                placeholder="Paste the caption here for faster, more accurate extraction…"
+                value={caption}
+                onChange={e => setCaption(e.target.value)}
+                style={{ minHeight: 100, resize: 'vertical', borderRadius: 12, fontSize: 13 }}
+              />
+              <p style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 5 }}>
+                Social apps often block scraping. Pasting the caption skips the slow Instagram lookup.
+              </p>
+            </div>
+          )}
 
           {/* Extraction loader */}
           {extracting && <ExtractionLoader />}
