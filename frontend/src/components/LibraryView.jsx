@@ -167,10 +167,8 @@ function RecipeDetailModal({ recipe: initialRecipe, onClose, onUpdated }) {
 
         {/* Hero image */}
         <div style={{ position: 'relative', height: 200, background: 'var(--cream-2)', flexShrink: 0 }}>
-          {recipe.thumbnail
-            ? <img src={imageProxyUrl(recipe.thumbnail)} alt={recipe.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
-            : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56 }}>🍽️</div>
-          }
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56 }}>🍽️</div>
+          {recipe.thumbnail && <img src={imageProxyUrl(recipe.thumbnail)} alt={recipe.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />}
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,.6) 0%, transparent 50%)' }} />
           <button onClick={onClose} style={{
             position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%',
@@ -807,11 +805,9 @@ function RecipeCard({ recipe, categories, onDelete, onUpdated, viewMode = 'grid'
           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--white)'; }}
         >
           {/* Thumbnail */}
-          <div style={{ width: 60, height: 60, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: 'var(--cream-2)' }}>
-            {recipe.thumbnail
-              ? <img src={imageProxyUrl(recipe.thumbnail)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
-              : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🍽️</div>
-            }
+          <div style={{ width: 60, height: 60, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: 'var(--cream-2)', position: 'relative' }}>
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🍽️</div>
+            {recipe.thumbnail && <img src={imageProxyUrl(recipe.thumbnail)} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />}
           </div>
           {/* Info */}
           <div style={{ flex: 1, minWidth: 0 }}>

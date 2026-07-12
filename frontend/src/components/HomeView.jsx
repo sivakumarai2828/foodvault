@@ -37,10 +37,8 @@ function TodayMealSlot({ slot, meal, onPlanClick }) {
         <div>
           {/* Image — dominant top section */}
           <div style={{ height: 130, overflow: 'hidden', background: 'var(--cream-2)', position: 'relative' }}>
-            {meal.recipe.thumbnail
-              ? <img src={imageProxyUrl(meal.recipe.thumbnail)} alt={meal.recipe.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
-              : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>🍽️</div>
-            }
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>🍽️</div>
+            {meal.recipe.thumbnail && <img src={imageProxyUrl(meal.recipe.thumbnail)} alt={meal.recipe.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />}
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,.35) 0%, transparent 50%)' }} />
           </div>
           <div style={{ padding: '11px 14px 14px' }}>
@@ -143,10 +141,8 @@ function RecentCard({ recipe, onClick }) {
       }}
     >
       <div style={{ height: 104, background: 'var(--cream-2)', overflow: 'hidden', position: 'relative' }}>
-        {recipe.thumbnail
-          ? <img src={imageProxyUrl(recipe.thumbnail)} alt={recipe.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
-          : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🍽️</div>
-        }
+        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🍽️</div>
+        {recipe.thumbnail && <img src={imageProxyUrl(recipe.thumbnail)} alt={recipe.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,.2), transparent 50%)' }} />
       </div>
       <div style={{ padding: '9px 10px 11px' }}>

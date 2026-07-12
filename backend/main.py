@@ -362,7 +362,13 @@ async def image_proxy(url: str):
     try:
         async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
             resp = await client.get(url, headers={"Referer": "https://www.instagram.com/", "User-Agent": "Mozilla/5.0"})
-            return Response(content=resp.content, media_type=resp.headers.get("content-type", "image/jpeg"))
+            content_type = resp.headers.get("content-type", "")
+            # Expired/blocked CDN links (Instagram 403s) must not be served as fake 200 images
+            if resp.status_code != 200 or not content_type.startswith("image/"):
+                raise HTTPException(status_code=404, detail="Image not found")
+            return Response(content=resp.content, media_type=content_type)
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(status_code=404, detail="Image not found")
 
