@@ -51,3 +51,6 @@ export const addRecipeToShopping = (recipeId) => api.post(`/shopping/add-recipe/
 
 // Today
 export const getTodayMenu = () => api.get('/today').then(r => r.data)
+
+// Account
+export const deleteAccount = () => api.delete('/account')

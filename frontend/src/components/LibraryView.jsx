@@ -52,6 +52,35 @@ function NutritionRing({ calories }) {
   )
 }
 
+// ─── Photo URL Dialog (window.prompt doesn't work in native webviews) ─────────
+function PhotoUrlDialog({ initial = '', onSave, onCancel }) {
+  const [val, setVal] = useState(initial)
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(30,22,10,.45)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onClick={e => e.target === e.currentTarget && onCancel()}
+    >
+      <div style={{ background: 'var(--white)', borderRadius: 16, padding: 18, width: '100%', maxWidth: 380, border: '1.5px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
+        <p className="section-label" style={{ marginBottom: 8 }}>Photo URL</p>
+        <input
+          autoFocus
+          placeholder="https://…"
+          value={val}
+          onChange={e => setVal(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && val.trim()) onSave(val.trim())
+            if (e.key === 'Escape') onCancel()
+          }}
+        />
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
+          <button className="btn btn-ghost btn-sm" onClick={onCancel}>Cancel</button>
+          <button className="btn btn-primary btn-sm" disabled={!val.trim()} onClick={() => onSave(val.trim())}>Save</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Recipe Detail Modal ──────────────────────────────────────────────────────
 function RecipeDetailModal({ recipe: initialRecipe, onClose, onUpdated }) {
   const toast = useToast()
@@ -61,6 +90,7 @@ function RecipeDetailModal({ recipe: initialRecipe, onClose, onUpdated }) {
   const [note, setNote] = useState(initialRecipe.notes || '')
   const [reExtracting, setReExtracting] = useState(false)
   const [cookingMode, setCookingMode] = useState(false)
+  const [photoDialog, setPhotoDialog] = useState(false)
   // Quick actions
   const [showMealPlanPicker, setShowMealPlanPicker] = useState(false)
   const [pickerDay, setPickerDay]   = useState('Monday')
@@ -163,6 +193,18 @@ function RecipeDetailModal({ recipe: initialRecipe, onClose, onUpdated }) {
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      {photoDialog && (
+        <PhotoUrlDialog
+          initial={recipe.thumbnail || ''}
+          onCancel={() => setPhotoDialog(false)}
+          onSave={async (newUrl) => {
+            setPhotoDialog(false)
+            await updateRecipe(recipe.id, { thumbnail: newUrl })
+            setRecipe(r => ({ ...r, thumbnail: newUrl }))
+            onUpdated({ ...recipe, thumbnail: newUrl })
+          }}
+        />
+      )}
       <div className="modal" style={{ maxWidth: 560, padding: 0, overflow: 'hidden', borderRadius: 24 }}>
 
         {/* Hero image */}
@@ -175,13 +217,7 @@ function RecipeDetailModal({ recipe: initialRecipe, onClose, onUpdated }) {
             background: 'rgba(0,0,0,.4)', border: 'none', color: '#fff', fontSize: 16,
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>✕</button>
-          <button onClick={async () => {
-            const newUrl = prompt('Paste a food image URL:')
-            if (newUrl?.trim()) {
-              await updateRecipe(recipe.id, { thumbnail: newUrl.trim() })
-              onUpdated({ ...recipe, thumbnail: newUrl.trim() })
-            }
-          }} style={{
+          <button onClick={() => setPhotoDialog(true)} style={{
             position: 'absolute', bottom: 10, right: 10,
             background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none',
             borderRadius: 8, fontSize: 11, padding: '5px 10px', cursor: 'pointer',
@@ -426,6 +462,7 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
   const [newCatInput, setNewCatInput] = useState('')
   const [addingCat, setAddingCat] = useState(false)
   const [catOpen, setCatOpen] = useState(false)
+  const [photoDialog, setPhotoDialog] = useState(false)
   const [localCategories, setLocalCategories] = useState(categories || [])
 
   // Always fetch fresh categories when modal opens
@@ -497,6 +534,13 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      {photoDialog && (
+        <PhotoUrlDialog
+          initial={thumbnail}
+          onCancel={() => setPhotoDialog(false)}
+          onSave={(u) => { setThumbnail(u); setPhotoDialog(false) }}
+        />
+      )}
       <div className="modal">
         <span className="modal-handle" />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -545,20 +589,14 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
               <img src={imageProxyUrl(thumbnail)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.parentElement.style.display = 'none' }} />
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,.3),transparent 50%)' }} />
               <button
-                onClick={() => {
-                  const newUrl = prompt('Paste a new image URL:', thumbnail)
-                  if (newUrl && newUrl.trim()) setThumbnail(newUrl.trim())
-                }}
+                onClick={() => setPhotoDialog(true)}
                 style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 11, padding: '4px 10px', cursor: 'pointer' }}
               >✎ Change photo</button>
             </div>
           )}
           {!extracting && !thumbnail && (
             <button
-              onClick={() => {
-                const newUrl = prompt('Paste an image URL:')
-                if (newUrl && newUrl.trim()) setThumbnail(newUrl.trim())
-              }}
+              onClick={() => setPhotoDialog(true)}
               style={{ background: 'var(--cream-2)', border: '1.5px dashed var(--border)', borderRadius: 14, height: 60, width: '100%', color: 'var(--ink-3)', fontSize: 13, cursor: 'pointer' }}
             >+ Add photo (optional)</button>
           )}

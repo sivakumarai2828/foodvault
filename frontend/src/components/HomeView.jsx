@@ -81,19 +81,19 @@ function QuickAction({ icon, label, desc, color, tint, onClick, loading }) {
       onTouchEnd={() => setPressed(false)}
       disabled={loading}
       style={{
-        background: tint, border: `1.5px solid ${color}22`,
-        borderRadius: 20, padding: '18px 14px', cursor: 'pointer',
-        display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10,
+        background: 'var(--white)', border: '1.5px solid var(--border)',
+        borderRadius: 18, padding: '14px 16px', cursor: 'pointer',
+        display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12,
         transition: 'all .15s', fontFamily: 'inherit', width: '100%', textAlign: 'left',
-        transform: pressed ? 'scale(0.96)' : 'scale(1)',
-        boxShadow: pressed ? 'none' : `0 4px 16px ${color}20`,
+        transform: pressed ? 'scale(0.97)' : 'scale(1)',
+        boxShadow: pressed ? 'none' : '0 2px 10px rgba(60,42,28,.06)',
         opacity: loading ? 0.7 : 1,
       }}
     >
       <div style={{
-        width: 48, height: 48, borderRadius: 15,
-        background: `${color}22`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
+        width: 44, height: 44, borderRadius: 13, flexShrink: 0,
+        background: tint, border: `1.5px solid ${color}26`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 21,
       }}>
         {loading ? <span className="spinner" style={{ width: 22, height: 22, borderTopColor: color }} /> : icon}
       </div>

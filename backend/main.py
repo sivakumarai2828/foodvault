@@ -39,6 +39,12 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# service_role client — required only for account deletion (auth admin API).
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
+supabase_admin: Optional[Client] = (
+    create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY) if SUPABASE_SERVICE_KEY else None
+)
+
 ai_gateway = AIGateway()
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -756,6 +762,24 @@ def get_today_menu(user_id: str = Depends(get_user_id)):
         result.append({"id": e["id"], "meal_slot": e["meal_slot"], "recipe": enrich_recipe(recipe) if recipe else None})
     result.sort(key=lambda x: slot_order.get(x["meal_slot"], 99))
     return {"day": day_name, "date": today.isoformat(), "meals": result}
+
+@app.delete("/api/account", status_code=204)
+def delete_account(user_id: str = Depends(get_user_id)):
+    """Permanently delete the user's data and auth account.
+
+    Required by Apple App Store guideline 5.1.1(v): apps with account
+    creation must offer in-app account deletion.
+    """
+    if not supabase_admin:
+        raise HTTPException(status_code=503, detail="Account deletion not configured (SUPABASE_SERVICE_KEY missing)")
+    supabase.table("shopping_items").delete().eq("user_id", user_id).execute()
+    supabase.table("meal_plans").delete().eq("user_id", user_id).execute()
+    supabase.table("recipes").delete().eq("user_id", user_id).execute()
+    try:
+        supabase_admin.auth.admin.delete_user(user_id)
+    except Exception as exc:
+        logging.getLogger("foodvault").error("account_deletion_auth_failed user=%s error=%r", user_id, exc)
+        raise HTTPException(status_code=500, detail="Data deleted but auth account removal failed")
 
 if __name__ == "__main__":
     import uvicorn

@@ -2,6 +2,8 @@ import { useState, useEffect, createContext, useContext, useCallback } from 'rea
 import HomeView     from './components/HomeView'
 import LoginView    from './components/LoginView'
 import { supabase, signOut } from './lib/supabase'
+import { deleteAccount } from './lib/api'
+import { isNativeApp } from './lib/platform'
 import TodayView    from './components/TodayView'
 import LibraryView  from './components/LibraryView'
 import PlannerView  from './components/PlannerView'
@@ -97,6 +99,58 @@ function OnboardingModal({ onDone }) {
   )
 }
 
+/* ── Delete Account Modal ─────────────────────────────────────────────────── */
+function DeleteAccountModal({ onClose }) {
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    setError('')
+    try {
+      await deleteAccount()
+      await signOut()
+      window.location.reload()
+    } catch {
+      setError('Deletion failed. Please try again or contact support.')
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !deleting && onClose()}>
+      <div className="modal" style={{ maxWidth: 420 }}>
+        <span className="modal-handle" />
+        <h2 style={{ fontFamily: "'Playfair Display',serif", fontWeight: 700, fontSize: 19, marginBottom: 10 }}>
+          Delete account?
+        </h2>
+        <p style={{ fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 6 }}>
+          This permanently deletes your account along with all your recipes, meal plans,
+          and shopping lists.
+        </p>
+        <p style={{ fontSize: 13.5, fontWeight: 600, color: '#C0392B', marginBottom: 16 }}>
+          This cannot be undone.
+        </p>
+        {error && <p style={{ fontSize: 12.5, color: '#C0392B', marginBottom: 12 }}>{error}</p>}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button className="btn btn-ghost" onClick={onClose} disabled={deleting}>Cancel</button>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            style={{
+              padding: '10px 18px', borderRadius: 12, border: 'none', cursor: 'pointer',
+              background: '#C0392B', color: '#fff', fontFamily: 'inherit', fontSize: 13.5,
+              fontWeight: 600, opacity: deleting ? 0.6 : 1,
+            }}
+          >
+            {deleting ? 'Deleting…' : 'Delete forever'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ── App ──────────────────────────────────────────────────────────────────── */
 export default function App() {
   const [tab, setTab] = useState('home')
@@ -105,6 +159,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showIntro, setShowIntro] = useState(false)
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -117,7 +172,25 @@ export default function App() {
       }
       setUser(session?.user ?? null)
     })
-    return () => subscription.unsubscribe()
+
+    // Native only: complete OAuth when the system browser deep-links back
+    // with the PKCE auth code (com.skorbits.foodvault://auth-callback?code=…)
+    let removeUrlListener
+    if (isNativeApp()) {
+      Promise.all([import('@capacitor/app'), import('@capacitor/browser')]).then(([{ App: CapApp }, { Browser }]) => {
+        CapApp.addListener('appUrlOpen', async ({ url }) => {
+          if (!url?.includes('auth-callback')) return
+          try { await Browser.close() } catch { /* browser may already be closed */ }
+          const code = new URL(url.replace('com.skorbits.foodvault://', 'https://app/')).searchParams.get('code')
+          if (code) await supabase.auth.exchangeCodeForSession(code)
+        }).then(handle => { removeUrlListener = () => handle.remove() })
+      })
+    }
+
+    return () => {
+      subscription.unsubscribe()
+      removeUrlListener?.()
+    }
   }, [])
 
   const navigate = (newTab) => setTab(newTab)
@@ -150,6 +223,7 @@ export default function App() {
   return (
     <ToastProvider>
       {showIntro && <OnboardingModal onDone={() => { localStorage.setItem('fv_intro_seen', '1'); setShowIntro(false) }} />}
+      {showDeleteAccount && <DeleteAccountModal onClose={() => setShowDeleteAccount(false)} />}
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', background: 'var(--cream)' }}>
 
         {/* ── Top Header ── */}
@@ -238,6 +312,31 @@ export default function App() {
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
                       Sign out
+                    </button>
+                    <a
+                      href="/privacy.html"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: 'block', width: '100%', padding: '8px 12px', borderRadius: 8,
+                        textDecoration: 'none', fontSize: 12.5, color: 'var(--ink-2)',
+                        fontWeight: 500, boxSizing: 'border-box',
+                      }}
+                    >
+                      Privacy policy
+                    </a>
+                    <button
+                      onClick={() => setShowDeleteAccount(true)}
+                      style={{
+                        width: '100%', padding: '8px 12px', borderRadius: 8,
+                        border: 'none', background: 'transparent', cursor: 'pointer',
+                        textAlign: 'left', fontSize: 12.5, color: 'var(--ink-3)', fontFamily: 'inherit',
+                        fontWeight: 500,
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#FDF0F0'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      Delete account…
                     </button>
                   </div>
                 )}

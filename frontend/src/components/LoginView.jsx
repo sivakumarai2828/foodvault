@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
+import { isNativeApp } from '../lib/platform'
 import { signInWithGoogle } from '../lib/supabase'
 
 const APP_URL = typeof window !== 'undefined' ? window.location.origin : 'https://foodvault-app.web.app'
@@ -87,6 +88,9 @@ function LoginCard({ loading, error, btnHover, setBtnHover, onLogin }) {
           🔒 Secure sign-in via Google. We never store your password.
         </p>
       </div>
+      <a href="/privacy.html" target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: '#92400e', marginTop: 12, textDecoration: 'underline' }}>
+        Privacy policy
+      </a>
     </div>
   )
 }
@@ -185,6 +189,7 @@ export default function LoginView() {
             <LoginCard loading={loading} error={error} btnHover={btnHover} setBtnHover={setBtnHover} onLogin={handleGoogleLogin} />
 
             {/* QR Code — below the login card */}
+            {!isNativeApp() && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 16,
               background: '#fff', border: '1.5px solid #fed7aa',
@@ -210,6 +215,7 @@ export default function LoginView() {
                 </div>
               </div>
             </div>
+            )}
           </div>
         </div>
       </div>
