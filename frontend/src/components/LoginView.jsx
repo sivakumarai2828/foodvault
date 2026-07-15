@@ -102,8 +102,16 @@ export default function LoginView() {
 
   const handleGoogleLogin = async () => {
     setLoading(true); setError(null)
-    const { error } = await signInWithGoogle()
-    if (error) { setError(error.message); setLoading(false) }
+    try {
+      const res = await signInWithGoogle()
+      if (res?.error) { setError(res.error.message); setLoading(false) }
+      // Native: the system browser is now open; re-enable the button so the
+      // user can retry if they cancel sign-in and come back.
+      if (isNativeApp()) setLoading(false)
+    } catch (e) {
+      setError(e?.message || 'Sign-in failed. Please try again.')
+      setLoading(false)
+    }
   }
 
   return (

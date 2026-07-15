@@ -22,11 +22,17 @@ _Last updated: 2026-07-13, from the Windows session that built the Android pipel
 
 ## Prerequisites still open (do these regardless of platform)
 
-1. **Supabase** → Auth → URL Configuration → Redirect URLs → add
+1. **Enable RLS in Supabase** — run `backend/enable-rls.sql` in the SQL editor.
+   Until then the public anon key can read every user's data. REQUIRED before launch.
+2. **`SUPABASE_SERVICE_KEY`** (service_role, from Supabase → Settings → API) into
+   `backend/.env` and Cloud Run env. The backend now routes ALL table access through
+   this key (see `db` client in main.py); without it, once RLS is on, every query
+   returns nothing.
+3. **Supabase** → Auth → URL Configuration → Redirect URLs → add
    `com.skorbits.foodvault://auth-callback` (native sign-in fails without it).
-2. **`SUPABASE_SERVICE_KEY`** (service_role) into `backend/.env` and Cloud Run env —
-   account deletion returns 503 until set.
-3. **Apple Developer Program** ($99/yr) — enroll at developer.apple.com; needed for
+4. **`CORS_ORIGINS`** in Cloud Run env → your Netlify domain +
+   `capacitor://localhost,https://localhost` (defaults are dev-only).
+5. **Apple Developer Program** ($99/yr) — enroll at developer.apple.com; needed for
    TestFlight and App Store.
 
 ## iOS steps on the Mac
