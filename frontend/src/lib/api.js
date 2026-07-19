@@ -23,6 +23,9 @@ export const deleteCategory = (id) => api.delete(`/categories/${id}`)
 // Recipes
 export const getRecipes = (params = {}) => api.get('/recipes', { params }).then(r => r.data)
 export const createRecipe = (data) => api.post('/recipes', data).then(r => r.data)
+// Fire-and-forget: record titles with no static-thumbnail keyword match
+export const logUnmatchedThumb = (term, sampleTitle) =>
+  api.post('/thumbs/unmatched', { term, sample_title: sampleTitle }).catch(() => {})
 export const updateRecipe = (id, data) => api.patch(`/recipes/${id}`, data).then(r => r.data)
 export const reExtractRecipe = (url) => api.get('/extract', { params: { url } }).then(r => r.data)
 export const deleteRecipe = (id) => api.delete(`/recipes/${id}`)

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getTodayMenu } from '../lib/api'
+import { recipeThumb, thumbError } from '../lib/staticThumbs'
 
 const SLOTS = ['Breakfast', 'Lunch', 'Snacks', 'Dinner']
 const SLOT_CFG = {
@@ -61,12 +62,10 @@ export default function TodayView() {
 
                 {meal?.recipe ? (
                   <div>
-                    {meal.recipe.thumbnail && (
-                      <div style={{ height: 155, overflow: 'hidden', position: 'relative' }}>
-                        <img src={meal.recipe.thumbnail} alt={meal.recipe.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.parentElement.style.display = 'none' }} />
-                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,.45) 0%,transparent 55%)' }} />
-                      </div>
-                    )}
+                    <div style={{ height: 155, overflow: 'hidden', position: 'relative' }}>
+                      <img src={recipeThumb(meal.recipe)} alt={meal.recipe.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => thumbError(e, meal.recipe)} />
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,.45) 0%,transparent 55%)' }} />
+                    </div>
                     <div style={{ padding: '13px 15px 15px' }}>
                       <p style={{ fontWeight: 600, fontSize: 14, lineHeight: 1.35, marginBottom: 10, color: 'var(--ink)' }}>{meal.recipe.title}</p>
                       {meal.recipe.category_name && <span className="tag" style={{ marginBottom: 12, display: 'inline-flex', fontSize: 10 }}>{meal.recipe.category_name}</span>}

@@ -131,6 +131,26 @@ async def fetch_social_caption(url: str, timeout: int = 12) -> dict:
             return {"caption": caption, "thumbnail": thumbnail}
     except Exception:
         pass
+    # Fallback: Instagram/TikTok serve og: meta tags to plain browser-UA
+    # requests even when yt-dlp is blocked (common from datacenter IPs).
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"}
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+            resp = await client.get(url, headers=headers)
+        if resp.status_code == 200:
+            import html as html_lib
+            def og(prop: str) -> str:
+                m = re.search(r'<meta[^>]+property="og:%s"[^>]+content="([^"]*)"' % prop, resp.text) or \
+                    re.search(r'<meta[^>]+content="([^"]*)"[^>]+property="og:%s"' % prop, resp.text)
+                return html_lib.unescape(m.group(1)) if m else ""
+            title = og("title")
+            # og:title looks like 'Author on Instagram: "caption text"' — keep the caption part
+            m = re.search(r'on Instagram: [“"](.+)[”"]\s*$', title, re.DOTALL)
+            caption = (m.group(1) if m else title).strip()
+            if caption or og("image"):
+                return {"caption": caption, "thumbnail": og("image")}
+    except Exception:
+        pass
     return {"caption": "", "thumbnail": ""}
 
 async def fetch_page_text(url: str) -> str:
@@ -555,6 +575,36 @@ async def create_recipe(data: RecipeCreate, user_id: str = Depends(get_user_id))
     }
     res = db.table("recipes").insert(row).execute()
     return enrich_recipe(res.data[0])
+
+class UnmatchedThumbTerm(BaseModel):
+    term: str
+    sample_title: Optional[str] = None
+
+@app.post("/api/thumbs/unmatched")
+def log_unmatched_thumb_term(data: UnmatchedThumbTerm, user_id: str = Depends(get_user_id)):
+    """Record a recipe title that matched no static-thumbnail keyword.
+
+    Fire-and-forget from the frontend; failures are swallowed so recipe
+    saving is never affected. New library images are generated manually
+    from this table (see docs/THUMBNAILS.md).
+    """
+    term = (data.term or "").strip().lower()[:80]
+    if not term:
+        return {"ok": False}
+    try:
+        existing = sb_one(db.table("unmatched_thumb_terms").select("id, hit_count").eq("term", term))
+        if existing:
+            db.table("unmatched_thumb_terms").update(
+                {"hit_count": existing["hit_count"] + 1, "updated_at": "now()"}
+            ).eq("id", existing["id"]).execute()
+        else:
+            db.table("unmatched_thumb_terms").insert(
+                {"term": term, "sample_title": (data.sample_title or "")[:200]}
+            ).execute()
+        return {"ok": True}
+    except Exception as exc:
+        logging.getLogger("foodvault").warning("unmatched_thumb_term_log_failed error=%r", exc)
+        return {"ok": False}
 
 @app.get("/api/recipes/{recipe_id}")
 def get_recipe(recipe_id: int, user_id: str = Depends(get_user_id)):

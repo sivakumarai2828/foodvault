@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { getMealPlan, getRecipes, setMealPlanEntry, deleteMealPlanEntry, aiSuggestPlan } from '../lib/api'
 import { imageProxyUrl } from '../lib/api'
+import { recipeThumb, thumbError } from '../lib/staticThumbs'
 import { useToast } from '../App'
 
 const DAYS  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
@@ -51,10 +52,7 @@ function RecipePicker({ recipes, onPick, onClose }) {
             }}
             onMouseEnter={e => { e.currentTarget.style.background = 'var(--primary-bg)'; e.currentTarget.style.borderColor = 'var(--primary-light)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'var(--cream)'; e.currentTarget.style.borderColor = 'var(--border)'; }}>
-              {r.thumbnail
-                ? <img src={imageProxyUrl(r.thumbnail)} alt="" style={{ width: 44, height: 44, borderRadius: 9, objectFit: 'cover', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
-                : <div style={{ width: 44, height: 44, borderRadius: 9, background: 'var(--cream-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🍽️</div>
-              }
+              <img src={recipeThumb(r)} alt="" style={{ width: 44, height: 44, borderRadius: 9, objectFit: 'cover', flexShrink: 0 }} onError={e => thumbError(e, r)} />
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</div>
                 {r.category_name && <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 2 }}>{r.category_name}</div>}
@@ -104,15 +102,11 @@ function CalendarCell({ entry, onOpen, onRemove, isToday }) {
       }}
     >
       {/* Thumbnail */}
-      {recipe.thumbnail ? (
-        <img
-          src={imageProxyUrl(recipe.thumbnail)} alt=""
-          style={{ width: '100%', height: 58, objectFit: 'cover', display: 'block' }}
-          onError={e => { e.target.style.display = 'none' }}
-        />
-      ) : (
-        <div style={{ height: 58, background: 'var(--cream-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🍽️</div>
-      )}
+      <img
+        src={recipeThumb(recipe)} alt=""
+        style={{ width: '100%', height: 58, objectFit: 'cover', display: 'block' }}
+        onError={e => thumbError(e, recipe)}
+      />
       {/* Title */}
       <div style={{ padding: '5px 7px 6px' }}>
         <p style={{

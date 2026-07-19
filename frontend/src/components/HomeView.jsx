@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getTodayMenu, getMealPlan, getRecipes, getShoppingList, aiSuggestPlan } from '../lib/api'
 import { imageProxyUrl } from '../lib/api'
+import { recipeThumb, thumbError } from '../lib/staticThumbs'
 import { useToast } from '../App'
 
 const SLOT_CFG = {
@@ -38,7 +39,7 @@ function TodayMealSlot({ slot, meal, onPlanClick }) {
           {/* Image — dominant top section */}
           <div style={{ height: 130, overflow: 'hidden', background: 'var(--cream-2)', position: 'relative' }}>
             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>🍽️</div>
-            {meal.recipe.thumbnail && <img src={imageProxyUrl(meal.recipe.thumbnail)} alt={meal.recipe.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />}
+            <img src={recipeThumb(meal.recipe)} alt={meal.recipe.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => thumbError(e, meal.recipe)} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,.35) 0%, transparent 50%)' }} />
           </div>
           <div style={{ padding: '11px 14px 14px' }}>
@@ -142,7 +143,7 @@ function RecentCard({ recipe, onClick }) {
     >
       <div style={{ height: 104, background: 'var(--cream-2)', overflow: 'hidden', position: 'relative' }}>
         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🍽️</div>
-        {recipe.thumbnail && <img src={imageProxyUrl(recipe.thumbnail)} alt={recipe.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />}
+        <img src={recipeThumb(recipe)} alt={recipe.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => thumbError(e, recipe)} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,.2), transparent 50%)' }} />
       </div>
       <div style={{ padding: '9px 10px 11px' }}>

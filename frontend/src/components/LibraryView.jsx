@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { getRecipes, getCategories, createRecipe, updateRecipe, deleteRecipe,
          extractRecipe, reExtractRecipe, aiCategorize, createCategory, deleteCategory, imageProxyUrl,
-         setMealPlanEntry, addRecipeToShopping } from '../lib/api'
+         setMealPlanEntry, addRecipeToShopping, logUnmatchedThumb } from '../lib/api'
 import { useToast } from '../App'
+import { recipeThumb, thumbError, hasKeywordMatch } from '../lib/staticThumbs'
 import CookingMode from './CookingMode'
 
 // ─── Category emoji mapping ───────────────────────────────────────────────────
@@ -210,7 +211,7 @@ function RecipeDetailModal({ recipe: initialRecipe, onClose, onUpdated }) {
         {/* Hero image */}
         <div style={{ position: 'relative', height: 200, background: 'var(--cream-2)', flexShrink: 0 }}>
           <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56 }}>🍽️</div>
-          {recipe.thumbnail && <img src={imageProxyUrl(recipe.thumbnail)} alt={recipe.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />}
+          <img src={recipeThumb(recipe)} alt={recipe.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => thumbError(e, recipe)} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,.6) 0%, transparent 50%)' }} />
           <button onClick={onClose} style={{
             position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%',
@@ -522,6 +523,11 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
         nutrition:    hasNutrition    ? extracted.nutrition    : (social ? {} : null),
       })
       toast('Recipe saved!', 'success')
+      // No real thumbnail and no library keyword hit → record the gap so a
+      // new static image can be generated manually later.
+      if (!recipe.thumbnail && !hasKeywordMatch(recipe.title)) {
+        logUnmatchedThumb(recipe.title, recipe.title)
+      }
       onAdded(recipe); onClose()
     } catch {
       toast('Failed to save', 'error')
@@ -845,7 +851,7 @@ function RecipeCard({ recipe, categories, onDelete, onUpdated, viewMode = 'grid'
           {/* Thumbnail */}
           <div style={{ width: 60, height: 60, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: 'var(--cream-2)', position: 'relative' }}>
             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🍽️</div>
-            {recipe.thumbnail && <img src={imageProxyUrl(recipe.thumbnail)} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />}
+            <img src={recipeThumb(recipe)} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => thumbError(e, recipe)} />
           </div>
           {/* Info */}
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -879,10 +885,7 @@ function RecipeCard({ recipe, categories, onDelete, onUpdated, viewMode = 'grid'
       <div className="card card-hover" style={{ borderRadius: 18, overflow: 'hidden', display: 'flex', flexDirection: 'column', cursor: 'pointer' }} onClick={() => setShowDetail(true)}>
         {/* Thumbnail */}
         <div style={{ position: 'relative', height: 140, background: 'var(--cream-2)', flexShrink: 0, overflow: 'hidden' }}>
-          {recipe.thumbnail
-            ? <img src={imageProxyUrl(recipe.thumbnail)} alt={recipe.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
-            : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>🍽️</div>
-          }
+          <img src={recipeThumb(recipe)} alt={recipe.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => thumbError(e, recipe)} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,.4),transparent 50%)' }} />
           {recipe.cooked && (
             <div style={{ position: 'absolute', top: 8, left: 8 }}>
