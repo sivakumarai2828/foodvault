@@ -190,6 +190,9 @@ select option { background: var(--white); color: var(--ink); }
   max-height: 92vh; /* fallback for older browsers */
   max-height: 92dvh; /* mobile URL bar makes vh overshoot the visible screen */
   overflow-y: auto;
+  overscroll-behavior: contain; /* keep scroll inside the sheet on iOS */
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   box-shadow: var(--shadow-lg); animation: sheetUp .24s ease;
 }
 @media (min-width: 640px) {

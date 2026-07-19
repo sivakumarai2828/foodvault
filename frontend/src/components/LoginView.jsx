@@ -242,7 +242,7 @@ export default function LoginView() {
         <div style={{
           background: 'linear-gradient(135deg, #fff7ed, #ffe8d6)',
           borderBottomLeftRadius: 32, borderBottomRightRadius: 32,
-          padding: '48px 24px 36px',
+          padding: 'max(48px, calc(12px + env(safe-area-inset-top, 0px))) 24px 36px',
           marginBottom: 24,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>

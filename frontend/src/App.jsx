@@ -233,6 +233,7 @@ export default function App() {
           WebkitBackdropFilter: 'blur(16px)',
           borderBottom: '1px solid var(--border)',
           position: 'sticky', top: 0, zIndex: 100,
+          paddingTop: 'env(safe-area-inset-top, 0px)',
         }}>
           <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', height: 60 }}>
             {/* Logo */}
