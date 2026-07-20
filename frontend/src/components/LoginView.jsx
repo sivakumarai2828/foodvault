@@ -24,6 +24,7 @@ function GoogleIcon() {
 }
 
 function LoginCard({ loading, error, btnHover, setBtnHover, onLogin }) {
+  const [agreed, setAgreed] = useState(false)
   return (
     <div style={{
       background: '#fff', borderRadius: 28,
@@ -53,21 +54,40 @@ function LoginCard({ loading, error, btnHover, setBtnHover, onLogin }) {
         Sign in to access your recipes and meal plans.
       </p>
 
+      <label style={{
+        display: 'flex', alignItems: 'flex-start', gap: 9, width: '100%',
+        marginBottom: 14, cursor: 'pointer', textAlign: 'left',
+      }}>
+        <input
+          type="checkbox"
+          checked={agreed}
+          onChange={e => setAgreed(e.target.checked)}
+          style={{ width: 17, height: 17, marginTop: 1, accentColor: '#f97316', flexShrink: 0, cursor: 'pointer' }}
+        />
+        <span style={{ fontSize: 12.5, color: '#6b5b48', lineHeight: 1.5 }}>
+          I agree to the{' '}
+          <a href="/terms.html" target="_blank" rel="noreferrer" style={{ color: '#d4522a', fontWeight: 600 }}>Terms of Use</a>
+          {' '}and{' '}
+          <a href="/privacy.html" target="_blank" rel="noreferrer" style={{ color: '#d4522a', fontWeight: 600 }}>Privacy Policy</a>.
+        </span>
+      </label>
+
       <button
         onClick={onLogin}
-        disabled={loading}
+        disabled={loading || !agreed}
         onMouseEnter={() => setBtnHover(true)}
         onMouseLeave={() => setBtnHover(false)}
+        title={!agreed ? 'Please accept the Terms of Use and Privacy Policy to continue' : undefined}
         style={{
           width: '100%', padding: '15px 20px', borderRadius: 14,
           border: '1.5px solid #e5e7eb', background: '#fff',
-          cursor: loading ? 'not-allowed' : 'pointer',
+          cursor: (loading || !agreed) ? 'not-allowed' : 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
           fontFamily: 'inherit', fontSize: 15, fontWeight: 600, color: '#1c0f00',
           transition: 'all .2s',
-          transform: btnHover && !loading ? 'translateY(-2px) scale(1.01)' : 'none',
-          boxShadow: btnHover && !loading ? '0 8px 24px rgba(0,0,0,.12)' : '0 2px 8px rgba(0,0,0,.06)',
-          opacity: loading ? 0.7 : 1,
+          transform: btnHover && !loading && agreed ? 'translateY(-2px) scale(1.01)' : 'none',
+          boxShadow: btnHover && !loading && agreed ? '0 8px 24px rgba(0,0,0,.12)' : '0 2px 8px rgba(0,0,0,.06)',
+          opacity: (loading || !agreed) ? 0.55 : 1,
         }}
       >
         {loading
