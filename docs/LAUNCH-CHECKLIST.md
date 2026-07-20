@@ -66,6 +66,41 @@ Capacitor for the native iOS/Android wrapper.
 
 Ordered. Owner = who must act.
 
+### 🔴 P0 — Backend access-control fixes (from code review)  (owner: me/code, ~20 min)
+
+Found in a review of `backend/main.py` (2026-07-20, Kimi K2 + verified against
+code). The DB client uses the Supabase **service_role key which bypasses RLS**,
+so a missing `.eq("user_id", user_id)` filter = cross-tenant access even after
+P1's RLS is enabled. Fix these in one pass, then redeploy backend.
+
+**Critical — genuine cross-tenant bugs (confirmed):**
+1. `POST /api/ai/categorize` (`main.py` ~633) — no auth, reads+UPDATES a recipe
+   by `id` with **no `user_id` filter**. Any caller can recategorize ANY user's
+   recipe. Fix: add `Depends(get_user_id)` + `.eq("user_id", user_id)` on both
+   the select and the update.
+2. `POST /api/ai/ingredients/{recipe_id}` (`main.py` ~652) — no auth, reads any
+   recipe by `id`, no `user_id`. Leaks other users' data + burns paid AI calls.
+   Fix: same as above.
+
+**High — do before public launch:**
+3. `POST /api/categories` and `DELETE /api/categories/{cat_id}` (~394, ~401) —
+   unauthenticated writes to a GLOBAL shared table; anyone can create/delete
+   categories for everyone. Fix: require auth (admin-only for delete ideally).
+4. Unauthenticated paid endpoints `POST /api/extract-from-text`, `GET /api/extract`,
+   `GET /api/preview` — each triggers a paid AI/Microlink call with no auth/rate
+   limit → cost-abuse/DoS on the $10/mo budget. Fix: add `Depends(get_user_id)`
+   (the app already calls these while logged in).
+
+**Deliberately NOT changing (correct as-is — do not "fix"):**
+- `GET /api/image-proxy` — loaded from `<img src>` tags that CANNOT send a JWT;
+  adding auth would break all thumbnails. SSRF guard is already solid
+  (rejects non-http(s) + private/loopback/link-local/reserved/multicast IPs,
+  `follow_redirects=False`, 12MB cap, image-only content-type). Leave auth off;
+  if abused, add a referer check or IP rate-limit, not JWT.
+- CORS — origins are an explicit allowlist (not `*`), so the dangerous
+  credentials+wildcard-origin combo is absent. Low risk; leave.
+- `extract_json` — already try/except-wrapped at call sites. Non-issue.
+
 ### 🔴 P1 — Supabase service key + RLS  (owner: you, ~10 min)  ⚠️ also fixes broken account deletion
 
 **Why urgent:** (a) without RLS the public anon key can read/modify EVERY user's
