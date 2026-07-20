@@ -88,9 +88,10 @@ function LoginCard({ loading, error, btnHover, setBtnHover, onLogin }) {
           🔒 Secure sign-in via Google. We never store your password.
         </p>
       </div>
-      <a href="/privacy.html" target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: '#92400e', marginTop: 12, textDecoration: 'underline' }}>
-        Privacy policy
-      </a>
+      <div style={{ display: 'flex', gap: 14, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <a href="/privacy.html" target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: '#92400e', textDecoration: 'underline' }}>Privacy policy</a>
+        <a href="/terms.html" target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: '#92400e', textDecoration: 'underline' }}>Terms of use</a>
+      </div>
     </div>
   )
 }

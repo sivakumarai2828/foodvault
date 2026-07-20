@@ -314,18 +314,25 @@ export default function App() {
                     >
                       Sign out
                     </button>
-                    <a
-                      href="/privacy.html"
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{
-                        display: 'block', width: '100%', padding: '8px 12px', borderRadius: 8,
-                        textDecoration: 'none', fontSize: 12.5, color: 'var(--ink-2)',
-                        fontWeight: 500, boxSizing: 'border-box',
-                      }}
-                    >
-                      Privacy policy
-                    </a>
+                    {[
+                      ['Privacy policy', '/privacy.html'],
+                      ['Terms of use', '/terms.html'],
+                      ['Content & copyright', '/dmca.html'],
+                    ].map(([label, href]) => (
+                      <a
+                        key={href}
+                        href={href}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          display: 'block', width: '100%', padding: '8px 12px', borderRadius: 8,
+                          textDecoration: 'none', fontSize: 12.5, color: 'var(--ink-2)',
+                          fontWeight: 500, boxSizing: 'border-box',
+                        }}
+                      >
+                        {label}
+                      </a>
+                    ))}
                     <button
                       onClick={() => setShowDeleteAccount(true)}
                       style={{
