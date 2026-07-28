@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getShoppingList, generateShoppingList, toggleShoppingItem, clearShoppingList, getMealPlan } from '../lib/api'
 import { useToast } from '../App'
+import { haptic } from '../lib/haptics'
 
 const GROUP_CFG = {
   Vegetables: { emoji: '🥦', color: '#5C7A5A', bg: '#EEF4EE', border: '#C0D4BF' },
@@ -37,6 +38,7 @@ export default function ShoppingView() {
   }
 
   const handleToggle = async (id) => {
+    haptic.light()   // fire before the await so the tap feels instant
     try { const u = await toggleShoppingItem(id); setItems(p => p.map(x => x.id === id ? u : x)) }
     catch { toast('Failed', 'error') }
   }

@@ -173,6 +173,17 @@ select option { background: var(--white); color: var(--ink); }
 .toast-info    { color: #2B4EA0; border-color: #C0CEFA; background: #F0F4FF; }
 @keyframes toastIn { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
+/* ── Tab view transition (REQ-008) ── */
+/* Mobile only: desktop/mouse users don't benefit and instant feels snappier. */
+@media (max-width: 767px) {
+  .tab-view { animation: tabFade 150ms ease; }
+}
+@keyframes tabFade { from { opacity: 0; } to { opacity: 1; } }
+/* Respect users who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .tab-view { animation: none; }
+}
+
 /* ── Modal ── */
 .modal-overlay {
   position: fixed; inset: 0;

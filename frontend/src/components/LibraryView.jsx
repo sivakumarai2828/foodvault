@@ -4,6 +4,8 @@ import { getRecipes, getCategories, createRecipe, updateRecipe, deleteRecipe,
          setMealPlanEntry, addRecipeToShopping, logUnmatchedThumb } from '../lib/api'
 import { useToast } from '../App'
 import { recipeThumb, thumbError, hasKeywordMatch } from '../lib/staticThumbs'
+import { useDebounce } from '../lib/useDebounce'
+import { haptic } from '../lib/haptics'
 import CookingMode from './CookingMode'
 
 // ─── Category emoji mapping ───────────────────────────────────────────────────
@@ -831,6 +833,7 @@ function RecipeCard({ recipe, categories, onDelete, onUpdated, viewMode = 'grid'
   const handleDelete = async (e) => {
     e.stopPropagation()
     if (!window.confirm(`Delete "${recipe.title}"?`)) return
+    haptic.heavy()
     try { await deleteRecipe(recipe.id); onDelete(recipe.id); toast('Deleted', 'info') }
     catch { toast('Delete failed', 'error') }
   }
@@ -967,18 +970,31 @@ export default function LibraryView({ triggerAdd, onTriggerAddDone }) {
     }
   }, [triggerAdd, onTriggerAddDone])
 
-  const load = useCallback(async () => {
+  // Search hits the backend (q=), so debounce it — otherwise every keystroke is
+  // its own request to Cloud Run + Supabase.
+  const debouncedSearch = useDebounce(search, 300)
+
+  const load = useCallback(async (req) => {
     setLoading(true)
     try {
       const [r, c] = await Promise.all([
-        getRecipes({ q: search || undefined, category_id: filterCat || undefined }),
+        getRecipes({ q: debouncedSearch || undefined, category_id: filterCat || undefined }),
         getCategories(),
       ])
+      // Discard responses that arrived after a newer query was issued, so
+      // out-of-order replies can't render stale results.
+      if (req?.cancelled) return
       setRecipes(r); setCategories(c)
-    } finally { setLoading(false) }
-  }, [search, filterCat])
+    } finally {
+      if (!req?.cancelled) setLoading(false)
+    }
+  }, [debouncedSearch, filterCat])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    const req = { cancelled: false }
+    load(req)
+    return () => { req.cancelled = true }
+  }, [load])
 
   const addCat = async () => {
     if (!newCat.trim()) return

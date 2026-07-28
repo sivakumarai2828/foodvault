@@ -4,6 +4,8 @@ import LoginView    from './components/LoginView'
 import { supabase, signOut } from './lib/supabase'
 import { deleteAccount } from './lib/api'
 import { isNativeApp } from './lib/platform'
+import { haptic } from './lib/haptics'
+import { setStatusBar, STATUS_BAR } from './lib/statusBar'
 import TodayView    from './components/TodayView'
 import LibraryView  from './components/LibraryView'
 import PlannerView  from './components/PlannerView'
@@ -17,6 +19,11 @@ export const useToast = () => useContext(ToastContext)
 function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([])
   const show = useCallback((msg, type = 'info') => {
+    // Toasts already mark every success/failure in the app, so hooking haptics
+    // in here covers "recipe saved", "plan generated", "delete failed" etc. in
+    // one place instead of at a dozen call sites (REQ-002).
+    if (type === 'success') haptic.success()
+    else if (type === 'error') haptic.error()
     const id = Date.now()
     setToasts(t => [...t, { id, msg, type }])
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3200)
@@ -193,7 +200,21 @@ export default function App() {
     }
   }, [])
 
+  // Theme the native status bar to match the cream header (REQ-004).
+  useEffect(() => { setStatusBar(user ? STATUS_BAR.app : STATUS_BAR.login) }, [user])
+
   const navigate = (newTab) => setTab(newTab)
+
+  // Tab press: haptic + scroll-to-top when the already-active tab is tapped
+  // (standard native behaviour, REQ-009).
+  const handleTabPress = (id) => {
+    haptic.light()
+    if (id === tab) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    setTab(id)
+  }
 
   const handleAddRecipe = () => {
     setTab('library')
@@ -253,7 +274,7 @@ export default function App() {
               {NAV.map(({ id, label, Icon }) => {
                 const a = tab === id
                 return (
-                  <button key={id} onClick={() => setTab(id)} style={{
+                  <button key={id} onClick={() => handleTabPress(id)} style={{
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '7px 14px', borderRadius: 99, border: 'none',
                     cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif',
@@ -355,7 +376,10 @@ export default function App() {
 
         {/* ── Page content ── */}
         <main style={{ flex: 1, maxWidth: 1080, width: '100%', margin: '0 auto', padding: '28px 16px 100px' }}>
-          {views[tab]}
+          {/* key={tab} restarts the fade on every tab switch (REQ-008) */}
+          <div key={tab} className="tab-view">
+            {views[tab]}
+          </div>
         </main>
 
         {/* ── Floating Action Button (mobile only) ── */}
@@ -381,7 +405,7 @@ export default function App() {
           {NAV.map(({ id, label, Icon }) => {
             const a = tab === id
             return (
-              <button key={id} onClick={() => setTab(id)} style={{
+              <button key={id} onClick={() => handleTabPress(id)} style={{
                 flex: 1, display: 'flex', flexDirection: 'column',
                 alignItems: 'center', gap: 3, padding: '9px 4px 5px',
                 border: 'none', background: 'transparent', cursor: 'pointer',

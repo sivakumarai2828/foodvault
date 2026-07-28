@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { aiChat } from '../lib/api'
 import { useToast } from '../App'
+import { isNativeApp } from '../lib/platform'
 
 const INITIAL_SUGGESTIONS = [
   'What chicken recipes do I have?',
@@ -114,6 +115,34 @@ export default function ChatView() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
 
+  // iOS doesn't shrink the viewport when the soft keyboard opens, so a fixed
+  // dvh-based height leaves the input hidden behind the keyboard. Subtract the
+  // keyboard height instead (REQ-003). Native only — browsers resize on their own.
+  const [keyboardHeight, setKeyboardHeight] = useState(0)
+  useEffect(() => {
+    if (!isNativeApp()) return
+    let showSub, hideSub, active = true
+    import('@capacitor/keyboard').then(({ Keyboard }) => {
+      Promise.all([
+        Keyboard.addListener('keyboardWillShow', info => setKeyboardHeight(info?.keyboardHeight || 0)),
+        Keyboard.addListener('keyboardWillHide', () => setKeyboardHeight(0)),
+      ]).then(([s, h]) => {
+        if (!active) { s.remove(); h.remove(); return }
+        showSub = s; hideSub = h
+      }).catch(() => {})
+    }).catch(() => {})
+    return () => {
+      active = false
+      showSub?.remove()
+      hideSub?.remove()
+    }
+  }, [])
+
+  // Keep the latest message visible once the keyboard has taken its space.
+  useEffect(() => {
+    if (keyboardHeight > 0) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [keyboardHeight])
+
   const send = async (text) => {
     const msg = (text || input).trim()
     if (!msg || loading) return
@@ -132,7 +161,12 @@ export default function ChatView() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100dvh - 160px)', maxHeight: 740 }}>
+    <div style={{
+      display: 'flex', flexDirection: 'column',
+      height: `calc(100dvh - 160px - ${keyboardHeight}px)`,
+      maxHeight: 740,
+      transition: 'height 220ms ease',
+    }}>
       <div style={{ marginBottom: 14 }}>
         <p className="section-label" style={{ marginBottom: 6 }}>✦ Powered by SKorbits</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

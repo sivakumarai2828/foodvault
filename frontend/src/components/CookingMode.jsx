@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { setStatusBar, STATUS_BAR } from '../lib/statusBar'
+import { haptic } from '../lib/haptics'
 
 // ── Cooking Mode ───────────────────────────────────────────────────────────────
 // Full-screen step-by-step cooking experience.
@@ -12,6 +14,13 @@ export default function CookingMode({ recipe, onClose }) {
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
+  }, [])
+
+  // This view is full-screen dark, so the status bar needs light icons while
+  // it's open and the app theme restored on exit (REQ-004).
+  useEffect(() => {
+    setStatusBar(STATUS_BAR.cooking)
+    return () => { setStatusBar(STATUS_BAR.app) }
   }, [])
 
   // Keyboard navigation
