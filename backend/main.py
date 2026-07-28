@@ -338,7 +338,7 @@ class TextExtractRequest(BaseModel):
 # ─── Extract from pasted text ─────────────────────────────────────────────────
 
 @app.post("/api/extract-from-text")
-async def extract_from_text(data: TextExtractRequest):
+async def extract_from_text(data: TextExtractRequest, user_id: str = Depends(get_user_id)):
     """Extract structured recipe details from user-pasted text (for Instagram/TikTok reels)."""
     result = ai_call(
         f"""Extract recipe details from this text:
@@ -392,14 +392,16 @@ def list_categories():
         raise HTTPException(status_code=503, detail=f"Database unavailable: {e}")
 
 @app.post("/api/categories", status_code=201)
-def create_category(name: str):
+def create_category(name: str, user_id: str = Depends(get_user_id)):
+    # categories is a global/shared table — auth prevents anonymous writes
+    # affecting every user.
     existing = sb_one(db.table("categories").select("id").eq("name", name))
     if existing:
         raise HTTPException(status_code=400, detail="Category already exists")
     return db.table("categories").insert({"name": name, "is_default": False}).execute().data[0]
 
 @app.delete("/api/categories/{cat_id}", status_code=204)
-def delete_category(cat_id: int):
+def delete_category(cat_id: int, user_id: str = Depends(get_user_id)):
     cat = sb_one(db.table("categories").select("*").eq("id", cat_id))
     if not cat:
         raise HTTPException(status_code=404, detail="Not found")
@@ -451,7 +453,7 @@ async def image_proxy(url: str):
         raise HTTPException(status_code=404, detail="Image not found")
 
 @app.get("/api/preview")
-async def preview_link(url: str):
+async def preview_link(url: str, user_id: str = Depends(get_user_id)):
     return await fetch_link_preview(url)
 
 def suggest_category_id(category_name: str, categories: list) -> Optional[int]:
@@ -462,7 +464,7 @@ def suggest_category_id(category_name: str, categories: list) -> Optional[int]:
     return matched["id"] if matched else None
 
 @app.get("/api/extract")
-async def extract_recipe(url: str, caption: Optional[str] = None):
+async def extract_recipe(url: str, caption: Optional[str] = None, user_id: str = Depends(get_user_id)):
     """Fetch preview + AI-extract full recipe details (title, ingredients, instructions, nutrition)."""
     categories = db.table("categories").select("*").order("name").execute().data
 
@@ -631,8 +633,10 @@ def delete_recipe(recipe_id: int, user_id: str = Depends(get_user_id)):
 # ─── AI ───────────────────────────────────────────────────────────────────────
 
 @app.post("/api/ai/categorize")
-def ai_categorize(recipe_id: int):
-    r = sb_one(db.table("recipes").select("*").eq("id", recipe_id))
+def ai_categorize(recipe_id: int, user_id: str = Depends(get_user_id)):
+    # db is the service-role client (bypasses RLS), so the user_id filter here
+    # is the only thing preventing cross-tenant reads/writes.
+    r = sb_one(db.table("recipes").select("*").eq("id", recipe_id).eq("user_id", user_id))
     if not r:
         raise HTTPException(status_code=404, detail="Not found")
     categories = db.table("categories").select("*").execute().data
@@ -646,12 +650,12 @@ def ai_categorize(recipe_id: int):
     )
     matched = next((c for c in categories if c["name"].lower() == result.lower().strip()), None)
     if matched:
-        db.table("recipes").update({"category_id": matched["id"]}).eq("id", recipe_id).execute()
+        db.table("recipes").update({"category_id": matched["id"]}).eq("id", recipe_id).eq("user_id", user_id).execute()
     return {"suggested_category": result, "matched_id": matched["id"] if matched else None}
 
 @app.post("/api/ai/ingredients/{recipe_id}")
-def ai_extract_ingredients(recipe_id: int):
-    r = sb_one(db.table("recipes").select("*").eq("id", recipe_id))
+def ai_extract_ingredients(recipe_id: int, user_id: str = Depends(get_user_id)):
+    r = sb_one(db.table("recipes").select("*").eq("id", recipe_id).eq("user_id", user_id))
     if not r:
         raise HTTPException(status_code=404, detail="Not found")
     # Return stored ingredients if available
