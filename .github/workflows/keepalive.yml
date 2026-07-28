@@ -1,0 +1,32 @@
+name: Supabase keepalive
+
+# Supabase free-tier projects auto-pause after ~7 days of inactivity, and a
+# paused project LOSES ITS DNS RECORD — which takes the whole app down until
+# someone restores it by hand (this happened on 2026-07-28).
+#
+# This pings the backend endpoint that runs a real Postgres query, so it counts
+# as project activity. It also acts as an uptime check: the step fails on any
+# non-200, so GitHub emails the repo owner when the chain is broken.
+#
+# This is a BACKUP for the primary cron on the OmniRoute VM
+# (/etc/cron.d/foodvault-keepalive) — deliberately on separate infrastructure so
+# a GCP/VM outage can't silently kill both.
+
+on:
+  schedule:
+    - cron: '15 1 * * *'   # daily, 01:15 UTC
+  workflow_dispatch:        # allows manual run from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend (hits Supabase via a real query)
+        run: |
+          URL="https://foodvault-backend-174528641235.us-central1.run.app/api/categories"
+          code=$(curl -s -o /dev/null -m 30 -w '%{http_code}' "$URL" || echo 000)
+          echo "GET /api/categories -> HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::Keepalive failed (HTTP $code). Supabase may be paused or the backend is down."
+            exit 1
+          fi
