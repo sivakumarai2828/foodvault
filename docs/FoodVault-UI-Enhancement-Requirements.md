@@ -1,10 +1,106 @@
 # FoodVault — UI Enhancement Requirements Document
-## Version 1.0 | App Store Readiness
+## Version 1.1 | App Store Readiness
+> **v1.1 (2026-07-28):** annotated with real implementation status after a
+> code-verified review. 8 of 28 requirements are done; see
+> [Implementation Status](#0-implementation-status-2026-07-28) and
+> [Review Corrections](#01-review-corrections) — several v1.0 severities were wrong.
+
+---
+
+## 0. Implementation Status (2026-07-28)
+
+Verified against the codebase on branch `native-apps` (commit `7460968`).
+
+**Legend:** ✅ done · ⚠️ done, needs device test · ⬜ not started · 🚫 not recommended
+
+### Done (8)
+
+| REQ | Item | Status | Notes |
+|-----|------|--------|-------|
+| REQ-027 | Error Boundary | ✅ **Verified** | Tested by injecting a real throw — recovery screen rendered, app recovered. `src/components/ErrorBoundary.jsx`, wired in `main.jsx`. |
+| REQ-012 | Search debounce | ✅ Done | 300ms debounce **+ stale-response guard**. `src/lib/useDebounce.js`, `LibraryView.jsx`. Needs a logged-in Network-tab check. |
+| REQ-008 | Tab transitions | ✅ **Verified** | 150ms fade, mobile-only, honours `prefers-reduced-motion`. `index.css` `.tab-view`. |
+| REQ-009 | Scroll-to-top on active tab | ✅ Done | `handleTabPress` in `App.jsx`. |
+| REQ-002 | Haptics | ⚠️ Code done | `src/lib/haptics.js`. Hooked into the **toast system** (covers all success/error paths) + tab press, shopping check, delete. Native-only → device test required. |
+| REQ-004 | Status bar theming | ⚠️ Code done | `src/lib/statusBar.js`; app/login/CookingMode states wired. Native-only → device test required. |
+| REQ-003 | Chat keyboard fix | ⚠️ Code done | Height subtracts `@capacitor/keyboard` height + autoscroll + listener cleanup. Native-only → device test required. |
+| REQ-014 | App icon & splash | ⚠️ ~90% done | Generated via `@capacitor/assets`: iOS uses the modern single 1024px asset (Xcode 14+ derives the rest — v1.0's 9-size table is outdated), all Android mipmap densities present. Only real-device visual check remains. |
+
+Plugins installed and registered on both platforms: `@capacitor/haptics`,
+`@capacitor/keyboard`, `@capacitor/status-bar` (5 total with `app` + `browser`).
+
+### Not done (20)
+
+| REQ | Item | Status | Why deferred |
+|-----|------|--------|--------------|
+| REQ-001 | Pull-to-refresh | ⬜ | Medium effort; views already refetch on mount. **Not an App Store blocker** (see corrections). |
+| REQ-005 | Swipe gestures | ⬜ | Real effort + gesture-conflict risk. Post-launch, driven by user feedback. |
+| REQ-006 | Bottom sheet drag-to-dismiss | ⬜ | Nice native touch; modals already close via backdrop tap + ✕. |
+| REQ-007 | Image caching | ⬜ | **Largely unnecessary now** — 163 thumbnails ship bundled in the app, so most images are already offline. Also: v1.0's recommended plugin is deprecated (see corrections). |
+| REQ-010 | New Chat button | ⬜ | Small, genuinely useful. Good next pick. |
+| REQ-011 | Emoji → SVG icons | ⬜ | Broad but shallow change; real Android font-rendering benefit. Good next pick. |
+| REQ-013 | Meal plan picker polish | ⬜ | Current picker is functional. |
+| REQ-015 | Dark mode | ⬜ | Doubles styling surface area for low pre-launch payoff. |
+| REQ-016 | Voice input | ⬜ | Post-launch. |
+| REQ-017 | Biometric app lock | 🚫 | Recipe data isn't sensitive enough to justify the friction + encrypted-storage work. |
+| REQ-018 | Push notifications | ⬜ | Needs APNs certs, backend scheduler, and a Settings view. Post-launch. |
+| REQ-019 | Review prompt | ⬜ | Only meaningful once there are real users. |
+| REQ-020 | Planner vertical day cards | ⬜ | Current planner works on mobile. |
+| REQ-021 | Long-press context menu | ⬜ | Depends on REQ-005 gesture work. |
+| REQ-022 | Chat skeletons | ⬜ | Typing indicator already covers the wait. |
+| REQ-023 | Pagination | ⬜ | **Premature** — library currently holds single-digit recipes. Revisit past ~100. |
+| REQ-024 | Cooking timer | ⬜ | Genuinely nice feature; post-launch. |
+| REQ-025 | Export shopping list | ⬜ | Post-launch. |
+| REQ-026 | Inline styles → CSS utilities | 🚫 | Pure refactor: zero user-visible value, regression risk across every screen. **Do not do pre-launch.** |
+| REQ-028 | Service worker / PWA | ⬜ | Web-only benefit; native app is the launch focus. |
+
+---
+
+## 0.1 Review Corrections
+
+Corrections to v1.0, found by verifying claims against the code.
+
+**1. The severity legend was wrong — these are NOT App Store blockers.**
+v1.0 marked REQ-001/002/003/004 as "🔴 CRITICAL — App Store Blocker: Yes". Apple
+does not reject apps for missing haptics, pull-to-refresh, or status-bar theming.
+Real rejection causes are 4.2 (minimum functionality), 4.8 (Sign in with Apple),
+5.1.1(v) (account deletion), 2.1 (crashes/bugs), 5.2 (IP).
+REQ-003 is the one legitimately near-critical item — an input hidden behind the
+keyboard is a fair 2.1 flag.
+
+**2. The actual App Store blockers are not in this document.**
+They live in `docs/LAUNCH-CHECKLIST.md`: **Sign in with Apple** (Guideline 4.8 —
+Google-only login is an expected rejection) and **working account deletion**
+(5.1.1(v)). Those outrank everything here.
+
+**3. REQ-012 was mis-severitied and misdiagnosed.**
+v1.0 called it 🟡 MEDIUM "unnecessary re-renders and potential jank". In fact
+search is **server-side** (`getRecipes({ q })` inside a `useEffect`), so every
+keystroke fired its own Cloud Run → Supabase request — a cost and correctness
+problem (out-of-order responses could render stale results). Fixed with debounce
+**plus** a stale-response guard.
+
+**4. REQ-027 was under-severitied.**
+A white-screen crash is a plausible 2.1 rejection and the fix is ~30 lines. It was
+the best value-per-effort item in the document; treated as top priority instead.
+
+**5. REQ-007 recommends a deprecated plugin.**
+`@capacitor-community/http` is deprecated — HTTP is built into Capacitor core now
+(`CapacitorHttp`). Do not install it.
+
+**6. Missing requirements worth adding.**
+- **Network-failure / offline states.** The app was fully down during a Supabase
+  outage on 2026-07-28 and rendered empty rather than "can't connect — retry".
+  AI extraction can also 503. This matters more than swipe gestures.
+- **Accessibility.** Appears in the testing matrix but has no requirement —
+  Dynamic Type / font scaling especially.
 
 ---
 
 ## Table of Contents
 
+0. [Implementation Status](#0-implementation-status-2026-07-28) ← **start here**
+0.1 [Review Corrections](#01-review-corrections)
 1. [Executive Summary](#1-executive-summary)
 2. [Severity Legend](#2-severity-legend)
 3. [Critical (Pre-Launch Blockers)](#3-critical-pre-launch-blockers)
@@ -25,9 +121,15 @@ This document catalogs all UI/UX enhancements required to bring FoodVault to App
 
 ## 2. Severity Legend
 
+> ⚠️ **The "App Store Blocker" column below is inaccurate — see
+> [Review Corrections](#01-review-corrections).** Apple does not reject apps for
+> missing haptics, pull-to-refresh, or status-bar theming. The badges are still
+> useful as *UX priority*, but do not read 🔴 as "will be rejected". The genuine
+> submission blockers are in `docs/LAUNCH-CHECKLIST.md`.
+
 | Badge | Meaning | App Store Blocker? |
 |-------|---------|-------------------|
-| 🔴 CRITICAL | Core native experience broken or missing | **Yes** |
+| 🔴 CRITICAL | Core native experience broken or missing | ~~Yes~~ → see note above |
 | 🟠 HIGH | Significant UX gap users will notice | Recommended |
 | 🟡 MEDIUM | Polish that elevates perceived quality | No |
 | 🟢 LOW | Nice-to-have; ship without | No |
@@ -40,6 +142,7 @@ This document catalogs all UI/UX enhancements required to bring FoodVault to App
 
 ### REQ-001 — Pull-to-Refresh on All Scrollable Content Feeds
 **Severity:** 🔴 CRITICAL | **Platforms:** iOS & Android | **Files:** Multiple views
+**Status:** ⬜ NOT DONE — deferred (not an App Store blocker)
 
 #### Description
 Implement pull-to-refresh gesture on all scrollable content views. This is standard native behavior expected on every mobile content feed.
@@ -77,6 +180,7 @@ Implement pull-to-refresh gesture on all scrollable content views. This is stand
 
 ### REQ-002 — Haptic Feedback on All Primary Interactions
 **Severity:** 🔴 CRITICAL | **Platforms:** iOS & Android | **Files:** `App.jsx`, all view components
+**Status:** ⚠️ CODE DONE — needs device test
 
 #### Description
 Add tactile feedback using `@capacitor/haptics` on every primary user action. This is the single highest-impact "native feel" improvement.
@@ -130,6 +234,7 @@ export const haptic = {
 
 ### REQ-003 — Fix Keyboard Handling in ChatView (Mobile)
 **Severity:** 🔴 CRITICAL | **Platforms:** iOS & Android | **Files:** `ChatView.jsx`, `App.jsx`
+**Status:** ⚠️ CODE DONE — needs device test
 
 #### Description
 On mobile devices, opening the software keyboard in ChatView hides the input field behind the keyboard because the container uses a fixed `calc(100dvh - 160px)` height. iOS Safari in particular does not resize the viewport when the keyboard opens.
@@ -185,6 +290,7 @@ useEffect(() => {
 
 ### REQ-004 — Status Bar Theming for Native Shell
 **Severity:** 🔴 CRITICAL | **Platforms:** iOS & Android | **Files:** `App.jsx`, `CookingMode.jsx`, `LoginView.jsx`
+**Status:** ⚠️ CODE DONE — needs device test
 
 #### Description
 The app header uses a warm cream background (`#FAF8F3`) with dark text, but the native status bar is not explicitly styled. On some Android devices the status bar background remains the system default. The CookingMode fullscreen dark view also needs matching status bar theming.
@@ -232,6 +338,7 @@ Call sites:
 
 ### REQ-005 — Swipe Gestures on Recipe Cards & Shopping Items
 **Severity:** 🟠 HIGH | **Platforms:** iOS & Android | **Files:** `LibraryView.jsx`, `ShoppingView.jsx`
+**Status:** ⬜ NOT DONE — post-launch
 
 #### Description
 Add native-style swipe gestures for faster interactions. This is a core interaction pattern users expect in native list-based apps.
@@ -267,6 +374,7 @@ Add native-style swipe gestures for faster interactions. This is a core interact
 
 ### REQ-006 — Bottom Sheet Drag-to-Dismiss for Modals
 **Severity:** 🟠 HIGH | **Platforms:** iOS & Android | **Files:** All modal components
+**Status:** ⬜ NOT DONE — post-launch
 
 #### Description
 Current modals use CSS entrance/exit animations but do not support the native drag-to-dismiss gesture. Users expect to grab the handle and swipe down to close.
@@ -301,6 +409,7 @@ Current modals use CSS entrance/exit animations but do not support the native dr
 
 ### REQ-007 — Image Caching for Offline Recipe Thumbnails
 **Severity:** 🟠 HIGH | **Platforms:** iOS & Android | **Files:** `src/lib/staticThumbs.js`, `src/lib/api.js`
+**Status:** ⬜ NOT DONE — mostly moot (thumbnails ship bundled); **plugin below is deprecated**
 
 #### Description
 Currently, `recipeThumb()` returns a proxied URL that fetches through the backend on every load. In a native app, users expect recipe images to work offline after first view.
@@ -356,6 +465,7 @@ Start with **Option A** for native builds. It requires minimal code changes — 
 
 ### REQ-008 — Navigation Transition Animations
 **Severity:** 🟠 HIGH | **Platforms:** All | **Files:** `App.jsx`
+**Status:** ✅ DONE — verified in browser
 
 #### Description
 Tab switches are instant cuts. Add subtle transitions for an app-like feel.
@@ -393,6 +503,7 @@ Or use a CSS-only approach with a class toggle:
 
 ### REQ-009 — Scroll-to-Top on Active Tab Tap
 **Severity:** 🟠 HIGH | **Platforms:** iOS & Android | **Files:** `App.jsx`, all view components
+**Status:** ✅ DONE
 
 #### Description
 Standard native behavior: tapping the currently active tab icon should scroll that view to the top.
@@ -424,6 +535,7 @@ In `App.jsx`, store refs for each view and call `scrollToTop()` on active tab ta
 
 ### REQ-010 — Add "New Chat" Button to ChatView
 **Severity:** 🟡 MEDIUM | **Platforms:** All | **Files:** `ChatView.jsx`
+**Status:** ⬜ NOT DONE — good next pick
 
 #### Description
 The AI chat has no way to clear conversation history and start fresh.
@@ -440,6 +552,7 @@ The AI chat has no way to clear conversation history and start fresh.
 
 ### REQ-011 — Replace Emoji Icons with SVG Icons
 **Severity:** 🟡 MEDIUM | **Platforms:** All | **Files:** Multiple
+**Status:** ⬜ NOT DONE — good next pick
 
 #### Description
 Several UI elements use text emoji instead of consistent SVG icons. Emojis render inconsistently across Android devices with custom fonts, and they don't match the polished SVG icon style used elsewhere.
@@ -478,6 +591,7 @@ export const IconPlus = ({ size = 24, color = 'currentColor' }) => (
 
 ### REQ-012 — Search Debounce in LibraryView
 **Severity:** 🟡 MEDIUM | **Platforms:** All | **Files:** `LibraryView.jsx`
+**Status:** ✅ DONE — debounce + stale-response guard
 
 #### Description
 The LibraryView search input filters recipes on every keystroke without debouncing, causing unnecessary re-renders and potential jank with large libraries.
@@ -513,6 +627,7 @@ const filteredRecipes = useMemo(() => {
 
 ### REQ-013 — Recipe Detail Modal — Inline Meal Plan Picker Improvements
 **Severity:** 🟡 MEDIUM | **Platforms:** All | **Files:** `LibraryView.jsx` (RecipeDetailModal)
+**Status:** ⬜ NOT DONE
 
 #### Description
 The current inline meal plan picker in `RecipeDetailModal` is functional but cramped and lacks visual polish.
@@ -530,6 +645,7 @@ The current inline meal plan picker in `RecipeDetailModal` is functional but cra
 
 ### REQ-014 — Add App Icon & Splash Screen Assets
 **Severity:** 🟡 MEDIUM | **Platforms:** iOS & Android | **Files:** Native asset directories
+**Status:** ⚠️ ~90% DONE — assets generated; size table below is outdated
 
 #### Description
 Ensure all native assets are production-ready for App Store and Google Play submission.
@@ -579,6 +695,7 @@ Ensure all native assets are production-ready for App Store and Google Play subm
 
 ### REQ-015 — Dark Mode Theme
 **Severity:** 🟢 LOW | **Platforms:** All | **Files:** `index.css`, all components
+**Status:** ⬜ NOT DONE — post-launch
 
 #### Description
 Add a dark mode toggle and automatic system preference detection.
@@ -611,6 +728,7 @@ Add a dark mode toggle and automatic system preference detection.
 
 ### REQ-016 — Voice Input Button in Chat & Search
 **Severity:** 🟢 LOW | **Platforms:** iOS & Android | **Files:** `ChatView.jsx`, `LibraryView.jsx`
+**Status:** ⬜ NOT DONE — post-launch
 
 #### Description
 Add a microphone button next to text inputs for voice-to-text input.
@@ -631,6 +749,7 @@ Add a microphone button next to text inputs for voice-to-text input.
 
 ### REQ-017 — Biometric App Lock
 **Severity:** 🟢 LOW | **Platforms:** iOS & Android | **Files:** `App.jsx`
+**Status:** 🚫 NOT RECOMMENDED — friction outweighs benefit for recipe data
 
 #### Description
 Allow users to optionally lock the app with Face ID / Touch ID / fingerprint.
@@ -655,6 +774,7 @@ npm install @aparajita/capacitor-biometric-auth
 
 ### REQ-018 — Push Notifications for Meal Reminders
 **Severity:** 🟢 LOW | **Platforms:** iOS & Android | **Files:** Backend + Frontend
+**Status:** ⬜ NOT DONE — needs APNs + backend scheduler
 
 #### Description
 Send timely push notifications based on meal plans.
@@ -686,6 +806,7 @@ npx cap sync
 
 ### REQ-019 — In-App App Store Review Prompt
 **Severity:** 🟢 LOW | **Platforms:** iOS & Android | **Files:** `App.jsx`
+**Status:** ⬜ NOT DONE — needs real users first
 
 #### Description
 Prompt satisfied users to leave a review at opportune moments.
@@ -714,6 +835,7 @@ npm install @capacitor/app-rate
 
 ### REQ-020 — Planner Mobile View — Vertical Day Cards
 **Severity:** 🟢 LOW | **Platforms:** Mobile Only | **Files:** `PlannerView.jsx`
+**Status:** ⬜ NOT DONE
 
 #### Description
 The current planner uses a horizontal-scroll calendar grid. On small screens, a vertical day-list is more scannable and touch-friendly.
@@ -731,6 +853,7 @@ The current planner uses a horizontal-scroll calendar grid. On small screens, a 
 
 ### REQ-021 — Long-Press Context Menu on Recipe Cards
 **Severity:** 🟢 LOW | **Platforms:** iOS & Android | **Files:** `LibraryView.jsx`
+**Status:** ⬜ NOT DONE — depends on REQ-005
 
 #### Description
 Add native-style context menus triggered by long-pressing recipe cards.
@@ -754,6 +877,7 @@ Add native-style context menus triggered by long-pressing recipe cards.
 
 ### REQ-022 — Add Loading Skeletons to ChatView
 **Severity:** 🟢 LOW | **Platforms:** All | **Files:** `ChatView.jsx`
+**Status:** ⬜ NOT DONE
 
 #### Description
 ChatView shows a typing indicator but no skeleton for the initial load state.
@@ -768,6 +892,7 @@ ChatView shows a typing indicator but no skeleton for the initial load state.
 
 ### REQ-023 — Pagination for Recipe Library
 **Severity:** 🟢 LOW | **Platforms:** All | **Files:** `LibraryView.jsx`, Backend API
+**Status:** ⬜ NOT DONE — premature (single-digit recipe count)
 
 #### Description
 `getRecipes()` currently loads all recipes at once. For users with 100+ recipes, this causes slow initial load and memory pressure.
@@ -785,6 +910,7 @@ ChatView shows a typing indicator but no skeleton for the initial load state.
 
 ### REQ-024 — Add "Cooking Timer" Inside CookingMode
 **Severity:** 🟢 LOW | **Platforms:** All | **Files:** `CookingMode.jsx`
+**Status:** ⬜ NOT DONE — post-launch
 
 #### Description
 Some recipe steps mention cooking durations. Detect these and offer inline timers.
@@ -801,6 +927,7 @@ Some recipe steps mention cooking durations. Detect these and offer inline timer
 
 ### REQ-025 — Export Shopping List to PDF / Share Sheet
 **Severity:** 🟢 LOW | **Platforms:** All | **Files:** `ShoppingView.jsx`
+**Status:** ⬜ NOT DONE — post-launch
 
 #### Description
 Allow users to export or share their shopping list in a clean, readable format.
@@ -821,6 +948,7 @@ Allow users to export or share their shopping list in a clean, readable format.
 
 ### REQ-026 — Extract Inline Styles to CSS Classes
 **Severity:** 🟡 MEDIUM | **Platforms:** All | **Files:** All `.jsx` files
+**Status:** 🚫 NOT RECOMMENDED pre-launch — refactor with regression risk, no user value
 
 #### Description
 The codebase uses extensive inline `style={{...}}` objects. While functional, this bloats JSX, makes theming harder, and prevents CSS-level optimizations.
@@ -852,6 +980,7 @@ The codebase uses extensive inline `style={{...}}` objects. While functional, th
 
 ### REQ-027 — Add Error Boundary
 **Severity:** 🟡 MEDIUM | **Platforms:** All | **Files:** `App.jsx`, new `ErrorBoundary.jsx`
+**Status:** ✅ DONE — verified by injected-throw test
 
 #### Description
 Add a React Error Boundary to catch runtime crashes gracefully instead of showing a white screen.
@@ -885,6 +1014,7 @@ class ErrorBoundary extends React.Component {
 
 ### REQ-028 — Service Worker for PWA
 **Severity:** 🟡 MEDIUM | **Platforms:** Web | **Files:** `vite.config.js`, new `sw.js`
+**Status:** ⬜ NOT DONE — web-only benefit
 
 #### Description
 Add a service worker for offline caching of static assets and API responses, making the web build a proper PWA.
@@ -902,51 +1032,60 @@ Add a service worker for offline caching of static assets and API responses, mak
 
 ## 8. Implementation Checklist
 
-Use this checklist to track progress. Check off items as they are completed, tested on both platforms, and merged.
+Reflects actual state as of 2026-07-28, branch `native-apps` (`7460968`).
+"Code" = implemented and merged. iOS/Android columns = tested on a real device.
 
-### Phase 1 — Critical (Pre-Launch)
-| # | Requirement | Assigned | iOS Tested | Android Tested | Merged |
-|---|-------------|----------|-----------|----------------|--------|
-| 1 | REQ-001 Pull-to-Refresh | | ☐ | ☐ | ☐ |
-| 2 | REQ-002 Haptic Feedback | | ☐ | ☐ | ☐ |
-| 3 | REQ-003 Chat Keyboard Fix | | ☐ | ☐ | ☐ |
-| 4 | REQ-004 Status Bar Theming | | ☐ | ☐ | ☐ |
+### ✅ Shipped — Tier 0 (done 2026-07-28)
+| # | Requirement | Code | Web Verified | iOS Tested | Android Tested |
+|---|-------------|------|--------------|-----------|----------------|
+| 27 | REQ-027 Error Boundary | ☑ | ☑ injected-throw test | ☐ | ☐ |
+| 12 | REQ-012 Search Debounce | ☑ | ☐ needs login | ☐ | ☐ |
+| 8 | REQ-008 Nav Transitions | ☑ | ☑ computed CSS | ☐ | ☐ |
+| 9 | REQ-009 Scroll-to-Top | ☑ | ☐ needs login | ☐ | ☐ |
+| 2 | REQ-002 Haptic Feedback | ☑ | n/a (native-only) | ☐ | ☐ |
+| 4 | REQ-004 Status Bar Theming | ☑ | n/a (native-only) | ☐ | ☐ |
+| 3 | REQ-003 Chat Keyboard Fix | ☑ | n/a (native-only) | ☐ | ☐ |
+| 14 | REQ-014 App Icon & Splash | ☑ ~90% | n/a | ☐ | ☐ |
 
-### Phase 2 — High
-| # | Requirement | Assigned | iOS Tested | Android Tested | Merged |
-|---|-------------|----------|-----------|----------------|--------|
-| 5 | REQ-005 Swipe Gestures | | ☐ | ☐ | ☐ |
-| 6 | REQ-006 Bottom Sheet Drag | | ☐ | ☐ | ☐ |
-| 7 | REQ-007 Image Caching | | ☐ | ☐ | ☐ |
-| 8 | REQ-008 Nav Transitions | | ☐ | ☐ | ☐ |
-| 9 | REQ-009 Scroll-to-Top | | ☐ | ☐ | ☐ |
+### ⬜ Next up (recommended order)
+| # | Requirement | Why next | Est. |
+|---|-------------|----------|------|
+| — | **Offline / network-error states** (new, not in v1.0) | App renders empty on backend outage | ~2 h |
+| 10 | REQ-010 New Chat Button | Small, real gap | ~30 m |
+| 11 | REQ-011 Emoji → SVG Icons | Fixes Android font rendering | ~2 h |
+| 1 | REQ-001 Pull-to-Refresh | Expected native gesture | ~3 h |
+| 13 | REQ-013 Meal Plan Picker polish | Cramped today | ~2 h |
 
-### Phase 3 — Medium
-| # | Requirement | Assigned | iOS Tested | Android Tested | Merged |
-|---|-------------|----------|-----------|----------------|--------|
-| 10 | REQ-010 New Chat Button | | ☐ | ☐ | ☐ |
-| 11 | REQ-011 SVG Icons | | ☐ | ☐ | ☐ |
-| 12 | REQ-012 Search Debounce | | ☐ | ☐ | ☐ |
-| 13 | REQ-013 Meal Plan Picker | | ☐ | ☐ | ☐ |
-| 14 | REQ-014 App Icon & Splash | | ☐ | ☐ | ☐ |
-| 26 | REQ-026 Inline Styles → CSS | | ☐ | ☐ | ☐ |
-| 27 | REQ-027 Error Boundary | | ☐ | ☐ | ☐ |
-| 28 | REQ-028 Service Worker | | ☐ | ☐ | ☐ |
+### ⬜ Post-launch backlog
+| # | Requirement | Notes |
+|---|-------------|-------|
+| 5 | REQ-005 Swipe Gestures | Gesture-conflict risk; do with 21 |
+| 6 | REQ-006 Bottom Sheet Drag | Nice-to-have |
+| 7 | REQ-007 Image Caching | Mostly moot — thumbnails are bundled |
+| 15 | REQ-015 Dark Mode | Large surface area |
+| 16 | REQ-016 Voice Input | |
+| 18 | REQ-018 Push Notifications | Needs APNs + backend scheduler |
+| 19 | REQ-019 Review Prompt | Needs real users |
+| 20 | REQ-020 Planner Mobile View | |
+| 21 | REQ-021 Context Menu | Depends on REQ-005 |
+| 22 | REQ-022 Chat Skeletons | |
+| 23 | REQ-023 Pagination | Revisit past ~100 recipes |
+| 24 | REQ-024 Cooking Timer | |
+| 25 | REQ-025 Export Shopping | |
+| 28 | REQ-028 Service Worker | Web-only |
 
-### Phase 4 — Low
-| # | Requirement | Assigned | iOS Tested | Android Tested | Merged |
-|---|-------------|----------|-----------|----------------|--------|
-| 15 | REQ-015 Dark Mode | | ☐ | ☐ | ☐ |
-| 16 | REQ-016 Voice Input | | ☐ | ☐ | ☐ |
-| 17 | REQ-017 Biometric Lock | | ☐ | ☐ | ☐ |
-| 18 | REQ-018 Push Notifications | | ☐ | ☐ | ☐ |
-| 19 | REQ-019 Review Prompt | | ☐ | ☐ | ☐ |
-| 20 | REQ-020 Planner Mobile View | | ☐ | ☐ | ☐ |
-| 21 | REQ-021 Context Menu | | ☐ | ☐ | ☐ |
-| 22 | REQ-022 Chat Skeletons | | ☐ | ☐ | ☐ |
-| 23 | REQ-023 Pagination | | ☐ | ☐ | ☐ |
-| 24 | REQ-024 Cooking Timer | | ☐ | ☐ | ☐ |
-| 25 | REQ-025 Export Shopping | | ☐ | ☐ | ☐ |
+### 🚫 Recommended against
+| # | Requirement | Reason |
+|---|-------------|--------|
+| 26 | REQ-026 Inline Styles → CSS | Refactor with regression risk across every screen and no user-visible benefit. Not pre-launch. |
+| 17 | REQ-017 Biometric Lock | Recipe data doesn't warrant the friction + encrypted-storage work. |
+
+### 🔴 Real submission blockers (tracked in `docs/LAUNCH-CHECKLIST.md`, NOT here)
+| Item | Guideline |
+|------|-----------|
+| Sign in with Apple | 4.8 — Google-only login is an expected rejection |
+| Working account deletion | 5.1.1(v) |
+| Apple Developer enrollment | prerequisite for everything above |
 
 ---
 
