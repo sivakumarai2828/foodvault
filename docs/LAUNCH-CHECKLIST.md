@@ -59,14 +59,47 @@ Capacitor for the native iOS/Android wrapper.
   `dmca.html`. Linked from account menu + login footer.
 - ✅ **Consent checkbox** on login — Google button disabled until user accepts Terms + Privacy
 - ✅ Backend deployed (Cloud Run revision current), frontend auto-deployed via Netlify
+- ✅ **Backend access control (P0)** — auth + `user_id` scoping on 6 endpoints;
+  verified 401 in production (rev `00007`)
+- ✅ **RLS + service-role key** — anon key can no longer read any user's data
+- ✅ **UI Tier 0** (2026-07-28): error boundary, search debounce + stale-response
+  guard, tab fade transitions, scroll-to-top, haptics, status-bar theming, chat
+  keyboard fix. Plugins added: `@capacitor/haptics`, `keyboard`, `status-bar`.
+  See `docs/FoodVault-UI-Enhancement-Requirements.md` §0 for per-item status.
 
 ---
 
 ## 4. PENDING — do these to launch
 
+**Quick status (verified 2026-07-28):** P0 ✅ · P1 ✅ (except step 5) ·
+**P2 is now the critical path — everything Apple-side is blocked on it.**
+
+| Item | Owner | Status |
+|------|-------|--------|
+| P0 backend access control | code | ✅ done |
+| P1 service key + RLS | you | ✅ done — except `create-unmatched-terms.sql` |
+| Rotate exposed `service_role` key | you | ⬜ before public launch |
+| **P2 Apple Developer enrollment ($99)** | **you** | ⬜ **critical path — start now** |
+| P3 Sign in with Apple | code | ⬜ blocked by P2 · likely rejection blocker |
+| P4 Codemagic CI build | code + you | ⬜ blocked by P2 |
+| P5 App Store metadata | you (I draft) | ⬜ can start anytime |
+| P6 Real-device test | you | ⬜ blocked by P2 |
+| P7 Cleanups | code | ⬜ needs your decisions (see below) |
+| Android device test | you | ⬜ APK built & ready to sideload |
+
 Ordered. Owner = who must act.
 
-### 🔴 P0 — Backend access-control fixes (from code review)  (owner: me/code, ~20 min)
+### ✅ P0 — Backend access-control fixes — **DONE 2026-07-28** (commit `99b06c3`, Cloud Run rev `00007`)
+
+All six endpoints below were fixed and **verified in production returning 401**
+to unauthenticated callers. A full audit of all 28 endpoints confirmed everything
+else already required auth. Left public deliberately: `/health`,
+`GET /api/categories` (global names only), `GET /api/image-proxy` (an `<img>` tag
+cannot send a JWT; the SSRF guard covers it).
+
+<details><summary>Original P0 write-up (kept for reference)</summary>
+
+#### 🔴 P0 — Backend access-control fixes (from code review)  (owner: me/code, ~20 min)
 
 Found in a review of `backend/main.py` (2026-07-20, Kimi K2 + verified against
 code). The DB client uses the Supabase **service_role key which bypasses RLS**,
@@ -101,7 +134,28 @@ P1's RLS is enabled. Fix these in one pass, then redeploy backend.
   credentials+wildcard-origin combo is absent. Low risk; leave.
 - `extract_json` — already try/except-wrapped at call sites. Non-issue.
 
-### 🔴 P1 — Supabase service key + RLS  (owner: you, ~10 min)  ⚠️ also fixes broken account deletion
+</details>
+
+### ✅ P1 — Supabase service key + RLS — **DONE 2026-07-28** (except step 5, below)
+
+- ✅ `SUPABASE_SERVICE_KEY` set on Cloud Run (verified present in env).
+- ✅ Backend routes **all** table access through the service-role `db` client.
+- ✅ RLS enabled on `recipes`, `meal_plans`, `shopping_items` — verified: the
+  public anon key now returns `[]` for those tables. (`categories` intentionally
+  excluded — global/shared, no `user_id`.)
+- ✅ Account deletion no longer 503s.
+- ⬜ **Step 5 still pending:** run `backend/create-unmatched-terms.sql` — verified
+  the `unmatched_thumb_terms` table does **not** exist yet, so
+  `POST /api/thumbs/unmatched` fails server-side. No user impact (the frontend
+  call is fire-and-forget), but thumbnail-gap logging collects nothing until then.
+
+⚠️ **Also outstanding:** the `service_role` key was pasted into a chat transcript
+on 2026-07-28 — **rotate it** (Supabase → Settings → API), then update
+`SUPABASE_SERVICE_KEY` on Cloud Run.
+
+<details><summary>Original P1 write-up (kept for reference)</summary>
+
+#### 🔴 P1 — Supabase service key + RLS  (owner: you, ~10 min)  ⚠️ also fixes broken account deletion
 
 **Why urgent:** (a) without RLS the public anon key can read/modify EVERY user's
 data — security hole; (b) **in-app account deletion is currently BROKEN in
@@ -160,12 +214,16 @@ Then: Archive → TestFlight → submit.
 Xcode → Settings → Accounts → add Apple ID → set Team on `App` target → plug
 iPhone → ⌘R. Test: Google round-trip, extraction, account deletion, safe areas.
 
-### 🟡 P7 — Small cleanups  (owner: me, quick)
+### 🟡 P7 — Small cleanups  (owner: you to decide, me to edit — both verified still open)
 
-- **Governing law**: `terms.html` §15 currently says **India** — confirm or change
-  to your actual country/state (one-line edit).
-- **Email consistency**: `privacy.html` still shows `sivakumarai2828@gmail.com`;
-  the newer pages use `aichatspace28@gmail.com`. Unify if desired.
+- **Governing law**: `terms.html` §15 says **"laws of India"** — confirmed still
+  present. Needs YOUR decision: is India correct, or should it be your actual
+  country/state of residence? (One-line edit once you say.)
+- **Email consistency**: confirmed inconsistent —
+  `privacy.html` → `sivakumarai2828@gmail.com`, but
+  `terms.html` and `dmca.html` → `aichatspace28@gmail.com`.
+  Pick one canonical public contact address; I'll unify. This is the address
+  users email for privacy/DMCA requests, so it should be one you monitor.
 
 ---
 
