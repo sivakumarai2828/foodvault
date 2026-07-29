@@ -84,7 +84,7 @@ Capacitor for the native iOS/Android wrapper.
 | P4 Codemagic CI build | code + you | ⬜ blocked by P2 |
 | P5 App Store metadata | you (I draft) | ⬜ can start anytime |
 | P6 Real-device test | you | ⬜ blocked by P2 |
-| P7 Cleanups | code | ⬜ needs your decisions (see below) |
+| P7 Cleanups | code | ✅ done — CA governing law, unified email |
 | Android device test | you | ⬜ APK built & ready to sideload |
 
 Ordered. Owner = who must act.
@@ -214,16 +214,17 @@ Then: Archive → TestFlight → submit.
 Xcode → Settings → Accounts → add Apple ID → set Team on `App` target → plug
 iPhone → ⌘R. Test: Google round-trip, extraction, account deletion, safe areas.
 
-### 🟡 P7 — Small cleanups  (owner: you to decide, me to edit — both verified still open)
+### ✅ P7 — Small cleanups — **DONE 2026-07-28**
 
-- **Governing law**: `terms.html` §15 says **"laws of India"** — confirmed still
-  present. Needs YOUR decision: is India correct, or should it be your actual
-  country/state of residence? (One-line edit once you say.)
-- **Email consistency**: confirmed inconsistent —
-  `privacy.html` → `sivakumarai2828@gmail.com`, but
-  `terms.html` and `dmca.html` → `aichatspace28@gmail.com`.
-  Pick one canonical public contact address; I'll unify. This is the address
-  users email for privacy/DMCA requests, so it should be one you monitor.
+- ✅ **Governing law**: `terms.html` §15 now **State of California, United
+  States** (was India), with an explicit carve-out preserving users' mandatory
+  local consumer-protection rights. One governing law covers all countries —
+  per-country terms are neither required nor practical.
+- ✅ **Email consistency**: all three legal pages (`privacy.html`, `terms.html`,
+  `dmca.html`) now use `aichatspace28@gmail.com`. No stale addresses remain.
+
+Note: California governing law also sits consistently with `dmca.html`, since
+DMCA is US federal law.
 
 ---
 
