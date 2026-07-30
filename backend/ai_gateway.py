@@ -48,6 +48,11 @@ class AIGateway:
         # timeout must be well above that.
         self.timeout = timeout if timeout is not None else int(os.getenv("OMNIROUTE_TIMEOUT", "120"))
         self.retries = retries
+        # Multiplier applied to every max_tokens to leave room for reasoning
+        # models' hidden thinking tokens (see chat()). 2.5x measured sufficient:
+        # a 7-day plan used 932 reasoning + 90 answer tokens.
+        self.reasoning_headroom = float(os.getenv("OMNIROUTE_REASONING_HEADROOM", "2.5"))
+        self.max_token_ceiling = int(os.getenv("OMNIROUTE_MAX_TOKEN_CEILING", "8000"))
         self.client = (
             OpenAI(api_key=self.api_key, base_url=self.base_url, timeout=self.timeout, max_retries=0)
             if self.api_key
@@ -168,6 +173,18 @@ class AIGateway:
                     time.sleep(min(0.5 * attempt, 2.0))
         raise last_error
 
+    def _finish_reason(self, response: Any) -> Optional[str]:
+        try:
+            return response.choices[0].finish_reason
+        except Exception:
+            return None
+
+    def _content(self, response: Any) -> str:
+        try:
+            return (response.choices[0].message.content or "").strip()
+        except Exception:
+            return ""
+
     def chat(
         self,
         messages: List[Dict[str, Any]],
@@ -177,23 +194,40 @@ class AIGateway:
         response_format: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> str:
-        payload = {
-            "model": model,
-            "messages": messages,
-            "max_tokens": max_tokens,
-            **kwargs,
-        }
-        if temperature is not None:
-            payload["temperature"] = temperature
-        if response_format is not None:
-            payload["response_format"] = response_format
+        # OmniRoute's "auto" routing frequently lands on a REASONING model, whose
+        # hidden thinking tokens are billed against max_tokens. Measured on this
+        # setup: a planning prompt with max_tokens=800 spent all 800 on reasoning
+        # and returned an EMPTY answer (finish_reason="length"). So give the model
+        # headroom up front, and if it still runs out, retry once with more.
+        budget = max(max_tokens, int(max_tokens * self.reasoning_headroom))
 
-        response = self._run_with_retries(
-            "chat",
-            model,
-            lambda: self.client.chat.completions.create(**payload),
-        )
-        return response.choices[0].message.content.strip()
+        def call(tokens: int):
+            payload = {"model": model, "messages": messages, "max_tokens": tokens, **kwargs}
+            if temperature is not None:
+                payload["temperature"] = temperature
+            if response_format is not None:
+                payload["response_format"] = response_format
+            return self._run_with_retries("chat", model, lambda: self.client.chat.completions.create(**payload))
+
+        response = call(budget)
+        content = self._content(response)
+
+        if not content and self._finish_reason(response) == "length":
+            retry_budget = min(budget * 2, self.max_token_ceiling)
+            logger.warning(
+                "ai_reasoning_exhausted model=%s budget=%s retrying_with=%s "
+                "(reasoning tokens consumed the whole budget; no visible answer)",
+                model, budget, retry_budget,
+            )
+            response = call(retry_budget)
+            content = self._content(response)
+
+        if not content:
+            raise RuntimeError(
+                f"AI returned an empty response (model={model}, "
+                f"finish_reason={self._finish_reason(response)})"
+            )
+        return content
 
     def stream(
         self,
