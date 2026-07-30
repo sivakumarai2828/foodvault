@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { getTodayMenu, getMealPlan, getRecipes, getShoppingList, aiSuggestPlan } from '../lib/api'
 import { imageProxyUrl } from '../lib/api'
 import { recipeThumb, thumbError } from '../lib/staticThumbs'
 import { useToast } from '../App'
+import { describeError } from '../lib/useOnline'
+import ErrorState from './ErrorState'
 
 const SLOT_CFG = {
   Breakfast: { emoji: '🌅', bg: '#FBF5E6', border: '#E8D499', label: '#C49A3C' },
@@ -196,23 +198,33 @@ export default function HomeView({ onNavigate, onAddRecipe }) {
   const [recipes, setRecipes]           = useState([])
   const [shoppingItems, setShoppingItems] = useState([])
   const [loading, setLoading]           = useState(true)
+  const [loadError, setLoadError]       = useState(null)
   const [genPlan, setGenPlan]           = useState(false)
 
   const { greeting, emoji, sub } = getGreeting()
 
-  useEffect(() => {
-    Promise.all([
-      getTodayMenu().catch(() => null),
-      getMealPlan().catch(() => []),
-      getRecipes().catch(() => []),
-      getShoppingList().catch(() => []),
-    ]).then(([today, plan, recs, shop]) => {
-      setTodayData(today)
-      setPlanEntries(plan || [])
-      setRecipes(recs || [])
-      setShoppingItems(shop || [])
-    }).finally(() => setLoading(false))
+  const load = useCallback(async () => {
+    setLoading(true)
+    // Home aggregates four endpoints. Individual misses degrade gracefully, but
+    // if they ALL fail the backend is down — say so instead of rendering a page
+    // that looks like an empty account.
+    const results = await Promise.allSettled([
+      getTodayMenu(), getMealPlan(), getRecipes(), getShoppingList(),
+    ])
+    const [today, plan, recs, shop] = results
+    if (results.every(r => r.status === 'rejected')) {
+      setLoadError(describeError(results[0].reason))
+    } else {
+      setLoadError(null)
+      setTodayData(today.status === 'fulfilled' ? today.value : null)
+      setPlanEntries(plan.status === 'fulfilled' ? plan.value || [] : [])
+      setRecipes(recs.status === 'fulfilled' ? recs.value || [] : [])
+      setShoppingItems(shop.status === 'fulfilled' ? shop.value || [] : [])
+    }
+    setLoading(false)
   }, [])
+
+  useEffect(() => { load() }, [load])
 
   const handleAIPlan = async () => {
     if (genPlan) return
@@ -238,6 +250,7 @@ export default function HomeView({ onNavigate, onAddRecipe }) {
   const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
   if (loading) return <HomeSkeleton />
+  if (loadError) return <ErrorState message={loadError} onRetry={load} retrying={loading} />
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32, paddingTop: 4 }}>

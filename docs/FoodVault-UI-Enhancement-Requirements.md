@@ -1,19 +1,19 @@
 # FoodVault — UI Enhancement Requirements Document
 ## Version 1.1 | App Store Readiness
-> **v1.1 (2026-07-28):** annotated with real implementation status after a
-> code-verified review. 8 of 28 requirements are done; see
-> [Implementation Status](#0-implementation-status-2026-07-28) and
+> **v1.1 (2026-07-27):** annotated with real implementation status after a
+> code-verified review. **10 of 30 requirements are done**; see
+> [Implementation Status](#0-implementation-status-2026-07-27) and
 > [Review Corrections](#01-review-corrections) — several v1.0 severities were wrong.
 
 ---
 
-## 0. Implementation Status (2026-07-28)
+## 0. Implementation Status (2026-07-27)
 
 Verified against the codebase on branch `native-apps` (commit `7460968`).
 
 **Legend:** ✅ done · ⚠️ done, needs device test · ⬜ not started · 🚫 not recommended
 
-### Done (8)
+### Done (10)
 
 | REQ | Item | Status | Notes |
 |-----|------|--------|-------|
@@ -24,6 +24,8 @@ Verified against the codebase on branch `native-apps` (commit `7460968`).
 | REQ-002 | Haptics | ⚠️ Code done | `src/lib/haptics.js`. Hooked into the **toast system** (covers all success/error paths) + tab press, shopping check, delete. Native-only → device test required. |
 | REQ-004 | Status bar theming | ⚠️ Code done | `src/lib/statusBar.js`; app/login/CookingMode states wired. Native-only → device test required. |
 | REQ-003 | Chat keyboard fix | ⚠️ Code done | Height subtracts `@capacitor/keyboard` height + autoscroll + listener cleanup. Native-only → device test required. |
+| REQ-010 | New Chat button | ✅ **Verified** | Header button + confirm modal; full reset flow driven and asserted in-browser. `ChatView.jsx`. |
+| REQ-029 | Network-failure / offline states | ✅ **Verified** | `ErrorState.jsx` + `useOnline.js`. All 5 view loaders now catch failures instead of falling through to an empty state (the bug behind the 'Your library is empty' during the outage). Offline banner also shows on the login screen. Error copy + retry asserted in-browser. |
 | REQ-014 | App icon & splash | ⚠️ ~90% done | Generated via `@capacitor/assets`: iOS uses the modern single 1024px asset (Xcode 14+ derives the rest — v1.0's 9-size table is outdated), all Android mipmap densities present. Only real-device visual check remains. |
 
 Plugins installed and registered on both platforms: `@capacitor/haptics`,
@@ -37,7 +39,6 @@ Plugins installed and registered on both platforms: `@capacitor/haptics`,
 | REQ-005 | Swipe gestures | ⬜ | Real effort + gesture-conflict risk. Post-launch, driven by user feedback. |
 | REQ-006 | Bottom sheet drag-to-dismiss | ⬜ | Nice native touch; modals already close via backdrop tap + ✕. |
 | REQ-007 | Image caching | ⬜ | **Largely unnecessary now** — 163 thumbnails ship bundled in the app, so most images are already offline. Also: v1.0's recommended plugin is deprecated (see corrections). |
-| REQ-010 | New Chat button | ⬜ | Small, genuinely useful. Good next pick. |
 | REQ-011 | Emoji → SVG icons | ⬜ | Broad but shallow change; real Android font-rendering benefit. Good next pick. |
 | REQ-013 | Meal plan picker polish | ⬜ | Current picker is functional. |
 | REQ-015 | Dark mode | ⬜ | Doubles styling surface area for low pre-launch payoff. |
@@ -53,6 +54,7 @@ Plugins installed and registered on both platforms: `@capacitor/haptics`,
 | REQ-025 | Export shopping list | ⬜ | Post-launch. |
 | REQ-026 | Inline styles → CSS utilities | 🚫 | Pure refactor: zero user-visible value, regression risk across every screen. **Do not do pre-launch.** |
 | REQ-028 | Service worker / PWA | ⬜ | Web-only benefit; native app is the launch focus. |
+| REQ-030 | Accessibility / Dynamic Type | ⬜ | No requirement exists; font scaling especially. |
 
 ---
 
@@ -99,7 +101,7 @@ the best value-per-effort item in the document; treated as top priority instead.
 
 ## Table of Contents
 
-0. [Implementation Status](#0-implementation-status-2026-07-28) ← **start here**
+0. [Implementation Status](#0-implementation-status-2026-07-27) ← **start here**
 0.1 [Review Corrections](#01-review-corrections)
 1. [Executive Summary](#1-executive-summary)
 2. [Severity Legend](#2-severity-legend)
@@ -441,12 +443,14 @@ recipeThumb(recipe)
 
 #### Implementation Options
 
-**Option A — Native HTTP Stack (Recommended)**
-Use `@capacitor-community/http` which uses the native HTTP stack with its own disk cache:
-```bash
-npm install @capacitor-community/http
+> ⚠️ **DEPRECATED — do not install `@capacitor-community/http`.** It is no longer maintained. HTTP is built into Capacitor core now via `CapacitorHttp`.
+
+**Option A — CapacitorHttp (Recommended)**
+Capacitor 5+ ships `CapacitorHttp` in core. It uses the native HTTP stack and its own disk cache automatically:
+```js
+import { CapacitorHttp } from '@capacitor/core'
 ```
-This automatically caches HTTP responses including images.
+Swap `axios`/`fetch` for `CapacitorHttp.get()` / `CapacitorHttp.post()` when `isNativeApp()` is true. The native stack handles image caching without extra plugins.
 
 **Option B — Capacitor FileSystem**
 Download images to app documents directory on first view:
@@ -459,9 +463,10 @@ Store images as files, serve via `Filesystem.readFile()` + data URL.
 For the web build, add a service worker that caches image proxy responses.
 
 #### Recommended Approach
-Start with **Option A** for native builds. It requires minimal code changes — just swap `fetch`/`axios` for the native HTTP plugin when `isNativeApp()` is true. The native HTTP stack handles caching automatically.
+Use **Option A** (`CapacitorHttp`) for native builds. Zero extra install, minimal code changes — just swap the HTTP client when `isNativeApp()` is true. The native HTTP stack handles caching automatically.
 
 ---
+
 
 ### REQ-008 — Navigation Transition Animations
 **Severity:** 🟠 HIGH | **Platforms:** All | **Files:** `App.jsx`
@@ -535,7 +540,7 @@ In `App.jsx`, store refs for each view and call `scrollToTop()` on active tab ta
 
 ### REQ-010 — Add "New Chat" Button to ChatView
 **Severity:** 🟡 MEDIUM | **Platforms:** All | **Files:** `ChatView.jsx`
-**Status:** ⬜ NOT DONE — good next pick
+**Status:** ✅ DONE — verified (button hidden with only greeting, appears after a message, confirm modal, resets cleanly)
 
 #### Description
 The AI chat has no way to clear conversation history and start fresh.
@@ -651,18 +656,7 @@ The current inline meal plan picker in `RecipeDetailModal` is functional but cra
 Ensure all native assets are production-ready for App Store and Google Play submission.
 
 #### iOS — `ios/App/App/Assets.xcassets/AppIcon.appiconset`
-| Size | Filename |
-|------|----------|
-| 20pt @2x | Icon-20@2x.png (40×40) |
-| 20pt @3x | Icon-20@3x.png (60×60) |
-| 29pt @2x | Icon-29@2x.png (58×58) |
-| 29pt @3x | Icon-29@3x.png (87×87) |
-| 40pt @2x | Icon-40@2x.png (80×80) |
-| 40pt @3x | Icon-40@3x.png (120×120) |
-| 60pt @2x | Icon-60@2x.png (120×120) |
-| 60pt @3x | Icon-60@3x.png (180×180) |
-| 1024pt | Icon-1024.png (1024×1024) |
-
+> iOS: single 1024×1024 asset in `AppIcon.appiconset`; Xcode 14+ derives all required sizes automatically.
 #### Android — `android/app/src/main/res/mipmap-*/`
 | Density | Folder | Size |
 |---------|--------|------|
@@ -1030,12 +1024,64 @@ Add a service worker for offline caching of static assets and API responses, mak
 
 ---
 
+### REQ-029 — Network-Failure / Offline States
+**Severity:** 🟠 HIGH | **Platforms:** All | **Files:** All views, `src/lib/useOnline.js`, `src/components/ErrorState.jsx`
+**Status:** ✅ DONE — verified in browser (error copy, offline banner, ErrorState render + retry)
+
+#### Description
+The app was fully down during a Supabase outage on 2026-07-28 and rendered empty rather than "can't connect — retry". AI extraction can also 503. This matters more than swipe gestures.
+
+#### Acceptance Criteria
+- [ ] Show a non-blocking offline banner when `navigator.onLine` is false or API requests fail with network error
+- [ ] Banner text: "You're offline — some features may be unavailable" with a "Retry" button
+- [ ] Cache last-known data in `localStorage` so views don't render empty on restart
+- [ ] AI extraction: catch 503 and show "Service temporarily unavailable — please retry in a moment"
+- [ ] All API calls wrapped with a reusable `withOfflineFallback()` utility
+- [ ] Graceful degradation: read-only views (Library, Today) show cached data; write actions queue and retry
+
+#### Implementation Notes
+```js
+// src/lib/network.js
+export function isOnline() {
+  return navigator.onLine
+}
+export async function withOfflineFallback(promise, fallback) {
+  try { return await promise }
+  catch (e) {
+    if (!navigator.onLine || e.message.includes('network')) return fallback
+    throw e
+  }
+}
+```
+
+---
+
+### REQ-030 — Accessibility / Dynamic Type
+**Severity:** 🟡 MEDIUM | **Platforms:** iOS & Android | **Files:** `index.css`, all components
+**Status:** ⬜ NOT DONE — new in v1.1
+
+#### Description
+The app has no accessibility requirements. Dynamic Type / font scaling especially matters on iOS where users expect text to respect their system font-size setting.
+
+#### Acceptance Criteria
+- [ ] All text sizes use `rem` or `em` units (not fixed `px`) so they scale with system settings
+- [ ] Minimum touch target size: 44×44pt on iOS, 48×48dp on Android
+- [ ] All interactive elements have `aria-label` where icon-only or visual-only
+- [ ] Color contrast ratios meet WCAG 2.1 AA (4.5:1 for normal text, 3:1 for large text)
+- [ ] Screen reader announces state changes (e.g., "Recipe saved", "Item checked")
+- [ ] Focus indicators visible for keyboard navigation
+- [ ] Test with VoiceOver (iOS) and TalkBack (Android)
+
+#### Implementation Notes
+- Audit all `style={{ fontSize: ... }}` inline styles and convert to CSS variables that respect `clamp()` or `calc()` with a base rem
+- Use `@media (prefers-reduced-motion: reduce)` to disable animations for motion-sensitive users
+
 ## 8. Implementation Checklist
 
-Reflects actual state as of 2026-07-28, branch `native-apps` (`7460968`).
+Reflects actual state as of 2026-07-27, branch `native-apps` (`7460968`).
 "Code" = implemented and merged. iOS/Android columns = tested on a real device.
 
-### ✅ Shipped — Tier 0 (done 2026-07-28)
+### ✅ Shipped (Tier 0 + follow-ups)
 | # | Requirement | Code | Web Verified | iOS Tested | Android Tested |
 |---|-------------|------|--------------|-----------|----------------|
 | 27 | REQ-027 Error Boundary | ☑ | ☑ injected-throw test | ☐ | ☐ |
@@ -1045,13 +1091,13 @@ Reflects actual state as of 2026-07-28, branch `native-apps` (`7460968`).
 | 2 | REQ-002 Haptic Feedback | ☑ | n/a (native-only) | ☐ | ☐ |
 | 4 | REQ-004 Status Bar Theming | ☑ | n/a (native-only) | ☐ | ☐ |
 | 3 | REQ-003 Chat Keyboard Fix | ☑ | n/a (native-only) | ☐ | ☐ |
+| 10 | REQ-010 New Chat Button | ☑ | ☑ full reset flow driven | ☐ | ☐ |
+| 29 | REQ-029 Offline / error states | ☑ | ☑ copy + banner + retry | ☐ | ☐ |
 | 14 | REQ-014 App Icon & Splash | ☑ ~90% | n/a | ☐ | ☐ |
 
 ### ⬜ Next up (recommended order)
 | # | Requirement | Why next | Est. |
 |---|-------------|----------|------|
-| — | **Offline / network-error states** (new, not in v1.0) | App renders empty on backend outage | ~2 h |
-| 10 | REQ-010 New Chat Button | Small, real gap | ~30 m |
 | 11 | REQ-011 Emoji → SVG Icons | Fixes Android font rendering | ~2 h |
 | 1 | REQ-001 Pull-to-Refresh | Expected native gesture | ~3 h |
 | 13 | REQ-013 Meal Plan Picker polish | Cramped today | ~2 h |
@@ -1117,7 +1163,6 @@ Each requirement must pass:
 | `@capacitor/haptics` | REQ-002 | `npm install @capacitor/haptics` |
 | `@capacitor/keyboard` | REQ-003 | `npm install @capacitor/keyboard` |
 | `@capacitor/status-bar` | REQ-004 | `npm install @capacitor/status-bar` |
-| `@capacitor-community/http` | REQ-007 | `npm install @capacitor-community/http` |
 | `@capacitor/push-notifications` | REQ-018 | `npm install @capacitor/push-notifications` |
 | `@capacitor/share` | REQ-025 | `npm install @capacitor/share` |
 | `@capacitor/filesystem` | REQ-007 (alt) | `npm install @capacitor/filesystem` |

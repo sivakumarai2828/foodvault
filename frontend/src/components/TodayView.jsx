@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { getTodayMenu } from '../lib/api'
 import { recipeThumb, thumbError } from '../lib/staticThumbs'
+import { describeError } from '../lib/useOnline'
+import ErrorState from './ErrorState'
 
 const SLOTS = ['Breakfast', 'Lunch', 'Snacks', 'Dinner']
 const SLOT_CFG = {
@@ -13,8 +15,19 @@ const SLOT_CFG = {
 export default function TodayView() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
 
-  useEffect(() => { getTodayMenu().then(setData).finally(() => setLoading(false)) }, [])
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      setData(await getTodayMenu())
+      setLoadError(null)
+    } catch (err) {
+      setLoadError(describeError(err))
+    } finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { load() }, [load])
 
   const dateStr = data
     ? new Date(data.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
@@ -29,7 +42,9 @@ export default function TodayView() {
         <p style={{ color: 'var(--ink-2)', fontSize: 14, marginTop: 6 }}>{dateStr}</p>
       </div>
 
-      {loading ? (
+      {loadError ? (
+        <ErrorState message={loadError} onRetry={load} retrying={loading} />
+      ) : loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 16 }}>
           {[1,2,3,4].map(i => (
             <div key={i} className="card" style={{ borderRadius: 20, overflow: 'hidden' }}>

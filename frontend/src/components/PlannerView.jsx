@@ -3,6 +3,8 @@ import { getMealPlan, getRecipes, setMealPlanEntry, deleteMealPlanEntry, aiSugge
 import { imageProxyUrl } from '../lib/api'
 import { recipeThumb, thumbError } from '../lib/staticThumbs'
 import { useToast } from '../App'
+import { describeError } from '../lib/useOnline'
+import ErrorState from './ErrorState'
 
 const DAYS  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
 const DAY_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
@@ -150,6 +152,7 @@ export default function PlannerView() {
   const [plan, setPlan]         = useState({})
   const [recipes, setRecipes]   = useState([])
   const [loading, setLoading]   = useState(true)
+  const [loadError, setLoadError] = useState(null)
   const [suggesting, setSuggesting] = useState(false)
   const [picker, setPicker]     = useState(null) // { day, slot }
   const weekDates = getWeekDates()
@@ -166,6 +169,9 @@ export default function PlannerView() {
         map[e.day_of_week][e.meal_slot] = e
       }
       setPlan(map)
+      setLoadError(null)
+    } catch (err) {
+      setLoadError(describeError(err))
     } finally { setLoading(false) }
   }, [])
 
@@ -229,7 +235,9 @@ export default function PlannerView() {
         </div>
       </div>
 
-      {loading ? (
+      {loadError ? (
+        <ErrorState message={loadError} onRetry={load} retrying={loading} />
+      ) : loading ? (
         <div style={{ borderRadius: 20, overflow: 'hidden' }}>
           <div className="shimmer" style={{ height: 420 }} />
         </div>

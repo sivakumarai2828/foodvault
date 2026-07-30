@@ -4,6 +4,7 @@ import LoginView    from './components/LoginView'
 import { supabase, signOut } from './lib/supabase'
 import { deleteAccount } from './lib/api'
 import { isNativeApp } from './lib/platform'
+import { useOnline } from './lib/useOnline'
 import { haptic } from './lib/haptics'
 import { setStatusBar, STATUS_BAR } from './lib/statusBar'
 import TodayView    from './components/TodayView'
@@ -106,6 +107,23 @@ function OnboardingModal({ onDone }) {
   )
 }
 
+/* ── Offline Banner ───────────────────────────────────────────────────────── */
+/* Rendered on the login screen too: opening the app offline and tapping
+   "Continue with Google" otherwise fails with no explanation. */
+function OfflineBanner({ online }) {
+  if (online) return null
+  return (
+    <div role="status" style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1500,
+      background: '#5C5044', color: '#fff', textAlign: 'center',
+      fontSize: 12.5, fontWeight: 600, padding: '7px 14px',
+      paddingTop: 'calc(7px + env(safe-area-inset-top))',
+    }}>
+      You're offline — some things won't work until you reconnect
+    </div>
+  )
+}
+
 /* ── Delete Account Modal ─────────────────────────────────────────────────── */
 function DeleteAccountModal({ onClose }) {
   const [deleting, setDeleting] = useState(false)
@@ -167,6 +185,7 @@ export default function App() {
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showIntro, setShowIntro] = useState(false)
   const [showDeleteAccount, setShowDeleteAccount] = useState(false)
+  const online = useOnline()
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -239,12 +258,13 @@ export default function App() {
     </div>
   )
 
-  if (!user) return <ToastProvider><LoginView /></ToastProvider>
+  if (!user) return <ToastProvider><OfflineBanner online={online} /><LoginView /></ToastProvider>
 
   return (
     <ToastProvider>
       {showIntro && <OnboardingModal onDone={() => { localStorage.setItem('fv_intro_seen', '1'); setShowIntro(false) }} />}
       {showDeleteAccount && <DeleteAccountModal onClose={() => setShowDeleteAccount(false)} />}
+      <OfflineBanner online={online} />
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', background: 'var(--cream)' }}>
 
         {/* ── Top Header ── */}

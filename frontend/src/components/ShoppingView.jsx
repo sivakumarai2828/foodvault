@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { getShoppingList, generateShoppingList, toggleShoppingItem, clearShoppingList, getMealPlan } from '../lib/api'
 import { useToast } from '../App'
 import { haptic } from '../lib/haptics'
+import { describeError } from '../lib/useOnline'
+import ErrorState from './ErrorState'
 
 const GROUP_CFG = {
   Vegetables: { emoji: '🥦', color: '#5C7A5A', bg: '#EEF4EE', border: '#C0D4BF' },
@@ -17,6 +19,7 @@ export default function ShoppingView() {
   const [items, setItems] = useState([])
   const [planRecipes, setPlanRecipes] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
   const [generating, setGenerating] = useState(false)
 
   const load = async () => {
@@ -26,6 +29,9 @@ export default function ShoppingView() {
       setItems(shopItems)
       const titles = [...new Set((plan || []).map(e => e.recipe?.title).filter(Boolean))]
       setPlanRecipes(titles)
+      setLoadError(null)
+    } catch (err) {
+      setLoadError(describeError(err))
     } finally { setLoading(false) }
   }
   useEffect(() => { load() }, [])
@@ -122,7 +128,9 @@ export default function ShoppingView() {
         </div>
       )}
 
-      {loading ? (
+      {loadError ? (
+        <ErrorState message={loadError} onRetry={load} retrying={loading} />
+      ) : loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {[1,2,3].map(i => <div key={i} className="card" style={{ borderRadius: 16, overflow: 'hidden' }}><div className="shimmer" style={{ height: 160 }} /></div>)}
         </div>

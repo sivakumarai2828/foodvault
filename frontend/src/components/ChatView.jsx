@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { aiChat } from '../lib/api'
 import { useToast } from '../App'
 import { isNativeApp } from '../lib/platform'
+import { haptic } from '../lib/haptics'
 
 const INITIAL_SUGGESTIONS = [
   'What chicken recipes do I have?',
@@ -103,11 +104,12 @@ function Typing() {
   )
 }
 
+const GREETING = { role: 'assistant', content: "Hi! I'm your FoodVault cooking assistant, powered by Claude AI.\n\nI know all about the recipes in your library. Ask me what to cook, get ingredient lists, explore meal ideas, or plan your week — I'm here to help!" }
+
 export default function ChatView() {
   const toast = useToast()
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hi! I'm your FoodVault cooking assistant, powered by Claude AI.\n\nI know all about the recipes in your library. Ask me what to cook, get ingredient lists, explore meal ideas, or plan your week — I'm here to help!" }
-  ])
+  const [messages, setMessages] = useState([GREETING])
+  const [confirmReset, setConfirmReset] = useState(false)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
@@ -172,8 +174,52 @@ export default function ChatView() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <h1 className="page-title">AI Assistant</h1>
           <span className="badge badge-red" style={{ fontSize: 10 }}>Live</span>
+          {messages.length > 1 && (
+            <button
+              onClick={() => setConfirmReset(true)}
+              title="Start a new conversation"
+              aria-label="Start a new conversation"
+              style={{
+                marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
+                background: 'transparent', border: '1.5px solid var(--border)',
+                borderRadius: 99, padding: '5px 11px', cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)',
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.7 3" />
+                <polyline points="3 3 3 8 8 8" />
+              </svg>
+              New chat
+            </button>
+          )}
         </div>
       </div>
+
+      {confirmReset && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmReset(false)}>
+          <div className="modal" style={{ maxWidth: 380 }}>
+            <span className="modal-handle" />
+            <h2 style={{ fontFamily: "'Playfair Display',serif", fontWeight: 700, fontSize: 18, marginBottom: 8 }}>
+              Start a new conversation?
+            </h2>
+            <p style={{ fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 16 }}>
+              Your current chat will be cleared. Saved recipes aren't affected.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setConfirmReset(false)}>Cancel</button>
+              <button className="btn btn-primary btn-sm" onClick={() => {
+                haptic.light()
+                setMessages([GREETING])
+                setInput('')
+                setConfirmReset(false)
+                inputRef.current?.focus()
+              }}>New chat</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Initial suggestion pills — horizontally scrollable */}
       {messages.length <= 1 && (

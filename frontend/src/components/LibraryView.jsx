@@ -6,6 +6,8 @@ import { useToast } from '../App'
 import { recipeThumb, thumbError, hasKeywordMatch } from '../lib/staticThumbs'
 import { useDebounce } from '../lib/useDebounce'
 import { haptic } from '../lib/haptics'
+import { describeError } from '../lib/useOnline'
+import ErrorState from './ErrorState'
 import CookingMode from './CookingMode'
 
 // ─── Category emoji mapping ───────────────────────────────────────────────────
@@ -960,6 +962,7 @@ export default function LibraryView({ triggerAdd, onTriggerAddDone }) {
   const [newCat, setNewCat] = useState('')
   const [showCatInput, setShowCatInput] = useState(false)
   const [viewMode, setViewMode] = useState('grid') // 'grid' | 'list'
+  const [loadError, setLoadError] = useState(null)
   const searchRef = useRef(null)
 
   // Handle external trigger (from FAB / HomeView quick action)
@@ -984,7 +987,12 @@ export default function LibraryView({ triggerAdd, onTriggerAddDone }) {
       // Discard responses that arrived after a newer query was issued, so
       // out-of-order replies can't render stale results.
       if (req?.cancelled) return
-      setRecipes(r); setCategories(c)
+      setRecipes(r); setCategories(c); setLoadError(null)
+    } catch (err) {
+      // Without this, a backend outage fell through to the "Your library is
+      // empty" state — telling users their recipes were gone.
+      if (req?.cancelled) return
+      setLoadError(describeError(err))
     } finally {
       if (!req?.cancelled) setLoading(false)
     }
@@ -1126,6 +1134,8 @@ export default function LibraryView({ triggerAdd, onTriggerAddDone }) {
             ))}
           </div>
         )
+      ) : loadError ? (
+        <ErrorState message={loadError} onRetry={() => load()} retrying={loading} />
       ) : !recipes.length ? (
         <div className="empty">
           <div className="empty-icon">📚</div>
