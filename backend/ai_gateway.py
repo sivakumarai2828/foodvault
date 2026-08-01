@@ -7,14 +7,25 @@ from typing import Any, Dict, Iterable, List, Optional
 from openai import OpenAI
 
 
+# All routing tiers point at "auto" deliberately.
+#
+# "auto/smart" has no custom combo defined in OmniRoute, so it falls through to
+# the built-in default cascade: measured at 34s failures ("Maximum combo retry
+# limit reached") and a 68s success, and it sometimes spends its entire token
+# budget on hidden reasoning and returns empty content. "auto" resolves to
+# llama-3.3-70b on Groq in 0.6-2.3s and is more than capable of meal planning
+# and nutrition estimates.
+#
+# To reintroduce a premium tier later: create a combo literally named
+# "auto/smart" in OmniRoute (Combos -> New), then point these keys back at it.
 AI_PROFILE = {
     "chat": "auto",
     "cooking": "auto",
-    "recipe": "auto/smart",
-    "recipe_generation": "auto/smart",
+    "recipe": "auto",
+    "recipe_generation": "auto",
     "recipe_extraction": "auto",
-    "meal_planner": "auto/smart",
-    "nutrition": "auto/smart",
+    "meal_planner": "auto",
+    "nutrition": "auto",
     "vision": "auto",
     "ocr": "auto",
     "barcode": "auto",
