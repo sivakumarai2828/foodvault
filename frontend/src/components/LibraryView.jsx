@@ -493,8 +493,11 @@ function AddRecipeModal({ categories, onClose, onAdded }) {
     setNeedsTitle(false)
     try {
       const data = await extractRecipe(cleanUrl, caption.trim())
-      // Only use thumbnail for non-social URLs (social thumbnails often show the creator's face)
-      if (data.thumbnail && !isSocialUrl(cleanUrl)) setThumbnail(data.thumbnail)
+      // Always prefer the real extracted image, whatever the source. The bundled
+      // static thumbnail is only a fallback for when extraction returns nothing
+      // (see recipeThumb) or when the saved URL later stops loading — social CDN
+      // links expire, and thumbError() falls back to the static library then.
+      if (data.thumbnail) setThumbnail(data.thumbnail)
       if (data.title && !isJunkTitle(data.title)) setTitle(data.title)
       if (data.suggested_category_id) setCategoryId(String(data.suggested_category_id))
       setExtracted(data)
