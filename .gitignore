@@ -33,3 +33,8 @@ Thumbs.db
 # ruflo / claude-flow local artifacts
 .swarm/
 ruvector.db
+
+# Android signing — NEVER commit
+frontend/android/keystore.properties
+frontend/android/*.jks
+frontend/android/*.keystore
