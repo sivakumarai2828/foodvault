@@ -104,7 +104,7 @@ function Typing() {
   )
 }
 
-const GREETING = { role: 'assistant', content: "Hi! I'm your FoodVault cooking assistant, powered by Claude AI.\n\nI know all about the recipes in your library. Ask me what to cook, get ingredient lists, explore meal ideas, or plan your week — I'm here to help!" }
+const GREETING = { role: 'assistant', content: "Hi! I'm your FoodVault cooking assistant.\n\nI know all about the recipes in your library. Ask me what to cook, get ingredient lists, explore meal ideas, or plan your week — I'm here to help!" }
 
 export default function ChatView() {
   const toast = useToast()
