@@ -64,8 +64,9 @@ In Xcode:
 3. Test: Google sign-in round-trip (system browser → deep link back),
    recipe extraction, photo dialog, account-deletion modal.
 
-For TestFlight: Product → Archive → Distribute → App Store Connect, or set up
-Codemagic CI to build from GitHub automatically.
+For TestFlight: Product → Archive → Distribute → App Store Connect.
+(Cloud CI such as Codemagic is an option but is NOT configured — there is no
+`codemagic.yaml` in this repo.)
 
 ## Gotchas known from the Android side
 

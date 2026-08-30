@@ -81,7 +81,7 @@ Capacitor for the native iOS/Android wrapper.
 | Rotate exposed `service_role` key | you | ⬜ before public launch |
 | **P2 Apple Developer enrollment ($99)** | **you** | ⬜ **critical path — start now** |
 | P3 Sign in with Apple | code | ⬜ blocked by P2 · likely rejection blocker |
-| P4 Codemagic CI build | code + you | ⬜ blocked by P2 |
+| P4 Store build (Xcode on Mac) | code + you | ⬜ blocked by P2 |
 | P5 App Store metadata | you (I draft) | ⬜ can start anytime |
 | P6 Real-device test | you | ⬜ blocked by P2 |
 | P7 Cleanups | code | ✅ done — CA governing law, unified email |
@@ -192,11 +192,12 @@ offer an equivalent privacy option. Sign in with Apple is the fix. Google-only
   the Apple entitlement, which needs P2 done first).
 - Code can be written now but can't be tested/enabled until enrollment.
 
-### 🟠 P4 — Store build via Codemagic CI  (owner: me + you, after P2)
+### 🟠 P4 — Store build (owner: me + you, after P2)
 
 This Intel Mac runs Xcode 16.4, but App Store submissions need the current iOS
-SDK (Xcode 26 = Apple-Silicon-only). Fix: Codemagic cloud build (free tier
-~500 min/mo, fits budget). I set up `codemagic.yaml`; you provide Apple creds.
+SDK (Xcode 26 = Apple-Silicon-only). Options: build locally in Xcode on the Mac (simplest, works today), or a
+cloud CI service such as Codemagic if local builds become a bottleneck.
+NOTE: no `codemagic.yaml` exists in this repo — cloud CI is not set up.
 Then: Archive → TestFlight → submit.
 
 ### 🟠 P5 — App Store Connect metadata  (owner: you, I can draft)

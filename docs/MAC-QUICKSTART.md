@@ -115,6 +115,7 @@ machine — so neither overwrites the other.
 - Merge `native-apps` → `main` (also deploys web fixes to Netlify).
 - **Rotate the Supabase service_role key** before public launch (it was shared in
   a chat transcript), then update `SUPABASE_SERVICE_KEY` on Cloud Run.
-- Submit to App Store via Xcode Archive or Codemagic CI + TestFlight.
+- Submit to App Store via Xcode Archive + TestFlight. (Codemagic CI is an
+  option but is not currently set up.)
 
 See `docs/IOS-DEPLOYMENT.md` for the fuller reference.

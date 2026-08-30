@@ -8,3 +8,4 @@ aiofiles>=24.1.0
 python-multipart==0.0.9
 supabase
 yt-dlp
+pytest>=8.0.0
